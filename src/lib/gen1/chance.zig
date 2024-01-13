@@ -17,7 +17,6 @@ const Optional = @import("../common/optional.zig").Optional;
 const data = @import("data.zig");
 
 const enabled = options.chance;
-const showdown = options.showdown;
 
 const Move = data.Move;
 const MoveSlot = data.MoveSlot;
@@ -290,16 +289,9 @@ pub fn Chance(comptime Rational: type) type {
         //
         // Finally, because each player's actions are processed sequentially we only need a single
         // shared structure to track this information (though it needs to be cleared appropriately)
-        pending: if (showdown) struct {
+        pending: struct {
             hit: bool = false,
             hit_probablity: u8 = 0,
-        } else struct {
-            crit: bool = false,
-            crit_probablity: u8 = 0,
-            damage_roll: u8 = 0,
-            hit: bool = false,
-            hit_probablity: u8 = 0,
-            binding: u8 = 0,
         } = .{},
 
         /// Possible error returned by operations tracking chance probability.
@@ -317,15 +309,7 @@ pub fn Chance(comptime Rational: type) type {
 
             // We need to handle binding specially because we still need to commit it when attacking
             // into a Pokémon that is immune
-            if (!showdown) {
-                if (kind != .miss and self.pending.binding != 0) {
-                    assert(action.duration == 0);
-                    action.duration = @intCast(self.pending.binding);
-                    assert(action.durations.binding == 0);
-                    action.durations.binding = 1;
-                }
-                if (kind == .binding) return;
-            } else assert(kind != .binding);
+            assert(kind != .binding);
 
             // Always commit the hit result if we make it here (commit won't be called at all if the
             // target is immune/behind a sub/etc)
@@ -334,22 +318,7 @@ pub fn Chance(comptime Rational: type) type {
                 action.hit = if (self.pending.hit) .true else .false;
             }
 
-            if (showdown) return;
-
-            // If the move actually lands we can commit any past critical hit / damage rolls. We
-            // avoid updating anything if there wasn't a damage roll as any "critical hit" not tied
-            // to a damage roll is actually a no-op
-            if (kind == .hit and self.pending.damage_roll > 0) {
-                assert(!self.pending.crit or self.pending.crit_probablity > 0);
-
-                if (self.pending.crit_probablity != 0) {
-                    try self.probability.update(self.pending.crit_probablity, 256);
-                    action.critical_hit = if (self.pending.crit) .true else .false;
-                }
-
-                try self.probability.update(1, 39);
-                action.damage = self.pending.damage_roll;
-            }
+            return;
         }
 
         pub fn clearPending(self: *Self) void {
@@ -409,24 +378,15 @@ pub fn Chance(comptime Rational: type) type {
             if (!enabled) return;
 
             const n = if (crit) rate else @as(u8, @intCast(256 - @as(u9, rate)));
-            if (showdown) {
-                try self.probability.update(n, 256);
-                self.actions.get(player).critical_hit = if (crit) .true else .false;
-            } else {
-                self.pending.crit = crit;
-                self.pending.crit_probablity = n;
-            }
+            try self.probability.update(n, 256);
+            self.actions.get(player).critical_hit = if (crit) .true else .false;
         }
 
         pub fn damage(self: *Self, player: Player, roll: u8) Error!void {
             if (!enabled) return;
 
-            if (showdown) {
-                try self.probability.update(1, 39);
-                self.actions.get(player).damage = roll;
-            } else {
-                self.pending.damage_roll = roll;
-            }
+            try self.probability.update(1, 39);
+            self.actions.get(player).damage = roll;
         }
 
         pub fn secondaryChance(self: *Self, player: Player, proc: bool, rate: u8) Error!void {
@@ -489,15 +449,11 @@ pub fn Chance(comptime Rational: type) type {
         ) void {
             if (!enabled) return;
 
-            if (!showdown and field == .binding) {
-                self.pending.binding = if (options.key) 1 else turns;
-            } else {
-                var durations = &self.actions.get(target).durations;
-                assert(@field(durations, @tagName(field)) == 0 or
-                    (field == .confusion and player == target));
-                @field(durations, @tagName(field)) = 1;
-                self.actions.get(player).duration = if (options.key) 1 else turns;
-            }
+            var durations = &self.actions.get(target).durations;
+            assert(@field(durations, @tagName(field)) == 0 or
+                (field == .confusion and player == target));
+            @field(durations, @tagName(field)) = 1;
+            self.actions.get(player).duration = if (options.key) 1 else turns;
         }
 
         pub fn sleep(self: *Self, player: Player, turns: u4) Error!void {
@@ -641,85 +597,22 @@ test "Chance.criticalHit" {
     var chance: Chance(rational.Rational(u64)) = .{ .probability = .{} };
 
     try chance.criticalHit(.P1, true, 17);
-    if (showdown) {
-        try expectValue(Optional(bool).true, chance.actions.p1.critical_hit);
-        try expectProbability(&chance.probability, 17, 256);
-    } else {
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        chance.hit(true, 128);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 1, 2);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        chance.probability.reset();
-        try chance.damage(.P1, 217);
-
-        try chance.commit(.P1, .miss);
-        try expectProbability(&chance.probability, 1, 2);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        chance.probability.reset();
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 17, 19968); // (1/2) * (17/256) * (1/39)
-        try expectValue(Optional(bool).true, chance.actions.p1.critical_hit);
-    }
+    try expectValue(Optional(bool).true, chance.actions.p1.critical_hit);
+    try expectProbability(&chance.probability, 17, 256);
 
     chance.reset();
 
     try chance.criticalHit(.P2, false, 5);
-    if (showdown) {
-        try expectProbability(&chance.probability, 251, 256);
-        try expectValue(Optional(bool).false, chance.actions.p2.critical_hit);
-    } else {
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        chance.hit(true, 128);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 1, 2);
-        try expectValue(Optional(bool).None, chance.actions.p1.critical_hit);
-
-        chance.probability.reset();
-        try chance.damage(.P1, 217);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 251, 19968); // (1/2) * (251/256) * (1/39)
-        try expectValue(Optional(bool).false, chance.actions.p1.critical_hit);
-    }
+    try expectProbability(&chance.probability, 251, 256);
+    try expectValue(Optional(bool).false, chance.actions.p2.critical_hit);
 }
 
 test "Chance.damage" {
     var chance: Chance(rational.Rational(u64)) = .{ .probability = .{} };
 
     try chance.damage(.P1, 217);
-    if (showdown) {
-        try expectValue(217, chance.actions.p1.damage);
-        try expectProbability(&chance.probability, 1, 39);
-    } else {
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(0, chance.actions.p1.damage);
-
-        try chance.commit(.P1, .miss);
-        try expectProbability(&chance.probability, 1, 1);
-        try expectValue(0, chance.actions.p1.damage);
-
-        try chance.commit(.P1, .hit);
-        try expectProbability(&chance.probability, 1, 39);
-        try expectValue(217, chance.actions.p1.damage);
-    }
+    try expectValue(217, chance.actions.p1.damage);
+    try expectProbability(&chance.probability, 1, 39);
 }
 
 test "Chance.secondaryChance" {
@@ -803,11 +696,6 @@ test "Chance.duration" {
     chance.reset();
 
     chance.duration(.binding, .P2, .P2, 4);
-    if (!showdown) {
-        try expectValue(0, chance.actions.p2.duration);
-        try expectValue(0, chance.actions.p2.durations.binding);
-        try chance.commit(.P2, .hit);
-    }
     try expectValue(4, chance.actions.p2.duration);
     try expectValue(1, chance.actions.p2.durations.binding);
 }
