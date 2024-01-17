@@ -1,0 +1,234 @@
+update
+    start - if turn == 0, tries switchIn
+        findFirstAlive - obvious, return as index with 0 meaning no alive
+            also in checkFaint
+
+    selectMove - Check for volatiles.Recharging/Rage/Trashing/Charging, frz,slp,binding, SET SKIP_TURN
+        saveMove - commit as side.last_selected, battle.lastMove
+
+    turnOrder - obvious, speed tie
+
+    doTurn
+
+        checkFaint - check for terminal result
+
+            faint - cleanup (for sleep clause), log
+        
+        handleResidual - BRN, PSN, TOX, Leech Seed
+            also in beforeMove
+
+        executeMove
+            * switchIn - clear stuff, calls chance.switchIn
+                also in start
+
+            @ isForced - simple check for recharge, thrash, etc
+
+            @ beforeMove - mostly returns early if flinched, etc, DURATIONS
+                disabled - bool weather move will be blocked
+
+                @ handleThrashing - end and confuse (no decrement)
+                *** calls confusionDuration, which sets action.Duration but does not affect p
+
+
+            canMove
+                also in mirror move, metronome
+
+                @ decPP - obvious
+
+                setCounterable - idk, sets flag
+
+                onBegin - wrapper for Effects. , confusion, sleep, many things
+
+
+            doMove
+
+
+                specialDmg - if miss, return null, otherwise commit hit chance the switch case then apply damage
+                counterDamage -
+                buildRage - 
+                    all over doMove, above, and beforeMove (bide) 
+
+                calcDamage - set battle.last_damage to most basic a/d ratio + lvl, return bool if def == 0, which I dont think is possible in showdown
+                    only used in doMove and beforeMove (confusion self hit)
+
+                checkCriticalHit - lookup speed then call Rolls.criticalHit
+                adjustDmg - set last damage, return type effectiveness
+
+                randomizeDmg - rolls. wrapper, add calc info
+
+                applyDmg - bool whether nullified, which means we poppped 'subbed' players sub
+                    - in special/counterDamage and before move
+                
+
+
+                mirrorMove
+                metronome
+                    recursive, call canMove then doMove
+
+                    incPP - obvious
+
+                onEnd - SLEEP, bide, (un)boosts
+
+
+                alwaysHappens - same as moveEffect but for a handful of functions. likely just control flow
+                moveEffect - burnChance etc. wrapper for Effects.
+                    last in doMove
+
+
+    endTurn -
+        also in start
+        checkEBC
+
+
+Effects {}
+
+    bide*
+    burnChance*
+    charge
+    confusion*
+    conversion
+    disable*
+    drainHP
+    explode
+    flinchChance*
+    focusEnergy
+    freezeChance*
+    haze
+    heal
+    hyperBeam - recharging = turnOrder
+    leechSeed*
+    lightScreen
+    mimic*
+    mist
+    multiHit*
+    paralyze* - check immune, apply deboost
+    paralyzeChance* 
+    payday
+    poison*
+    rage
+    recoil
+    reflect
+    sleep*
+    splash
+    substitute
+    switchAndTeleport*
+    trashing*
+    transform
+    binding
+    boost
+    unboost
+
+
+    unmodifiedStats
+        only in .boost and .unboost
+    
+    
+    statusModify - apply PAR and BRN drops
+        in .boost, .unboost, switchIn
+
+    clearVolatiles - clears all durations
+        in haze
+
+checkHit - specialDamage, Effects.confusion/leech seed, TELEPORT, etc
+    mostly in Effects. fn's
+moveHit - handles switft, invuln, hyperbeam/sleep, does boost calc, handles mist, calls Rolls.
+    in doMove and checkHit
+
+
+Rolls {}
+    speedTie
+    criticalHit
+    damage
+    hit
+    confused
+    paralyzed
+    confusionChance
+    secondaryChance
+    poisonChance
+    unboost
+    metronome
+    psywave
+    sleepDuration
+    disableDuration
+    confusionDuration
+    attackingDuration
+    distribution
+    moveSlot
+
+
+Options.Chance{}
+
+    commit
+        doMove, specialDamage, counterDamage
+        checkHit
+        Effects.confusion
+        Effects.leechSeed
+        Effects.mimic
+        Effects.paralyze
+        Effects.poison
+        Effects.sleep
+        Effects.switchAndTeleport
+        Effects.unboost
+
+    clearPending - if haze, clear volatile status, otherwise clear wrap/attacking
+        doTurn - after first executeMove
+
+    clearDurations
+        beforeMove - confusion and para?
+        clearVolatiles
+
+    switched - reset actions where appro, swap sleep durations
+
+    speedTie - coinflip
+        Rolls.speedTie
+
+    hit - multiply by acc
+        Rolls.hit
+
+    criticalHit - mult, add to actions
+        Rolls.criticalHit
+
+    damage - 1/39, actions
+        Rolls.damage
+
+    secondaryChance - mult, actions
+        Rolls.confusionChance
+        Rolls.poisonChance
+        Rolls.secondaryChance
+        Rolls.unboost
+
+    confused - coinflip
+        Rolls.confused
+
+    paralyzed - 1/4, 3/4, action
+        Rolls.paralyzed
+
+    moveSlot - 1/den, action
+        Rolls.moveSlot
+
+    multiHit
+        Rolls.distribution
+
+    duration - actions only
+        Rolls. sleep/disable/confusion/attackingDuration, distribution
+
+    sleep
+    confusion
+    disable
+    attacking - complex math or w/e, based on observations
+        All in beforeMove
+
+    binding - ditto
+    psywave - mult/action
+    metronome - mult/action
+
+    secondaryChance -
+        Effects.burnChance
+        Effects.flinchChace
+        Effects.freezeChance
+        Effects.paraChance
+        Effects.confusionChance
+        Effects.secondaryChance
+        Effects.poisonChance
+        Rolls.unboost
+
