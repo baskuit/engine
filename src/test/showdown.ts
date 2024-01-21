@@ -28,7 +28,7 @@ export const ROLLS = {
       MAX_DMG: {key: keys.dmg, value: MAX},
       TIE: (n: 1 | 2) => ({key: tie, value: ranged(n, 2) - 1}),
       DRAG: (m: number, n = 5) =>
-        ({key: 'sim/battle.ts:1410:36', value: ranged(m - 1, n)}),
+        ({key: 'sim/battle.ts:1409:36', value: ranged(m - 1, n)}),
     };
   },
   metronome(gen: Generation, exclude: string[]) {
@@ -39,7 +39,7 @@ export const ROLLS = {
     return (move: string, skip: string[] = []) => {
       const moves = all.filter(m => !skip.includes(m));
       const value = ranged(moves.indexOf(move) + 1, moves.length) - 1;
-      return {key: 'data/moves.ts:12171:23', value};
+      return {key: 'data/moves.ts:12169:23', value};
     };
   },
 };
