@@ -313,43 +313,46 @@ pub fn Chance(comptime Rational: type) type {
         }
 
         pub fn commit(self: *Self, player: Player, kind: Commit) Error!void {
-            var action = self.actions.get(player);
+            _ = self;
+            _ = player;
+            _ = kind;
+            // var action = self.actions.get(player);
 
-            // We need to handle binding specially because we still need to commit it when attacking
-            // into a Pokémon that is immune
-            if (!showdown) {
-                if (kind != .miss and self.pending.binding != 0) {
-                    assert(action.duration == 0);
-                    action.duration = @intCast(self.pending.binding);
-                    assert(action.durations.binding == 0);
-                    action.durations.binding = 1;
-                }
-                if (kind == .binding) return;
-            } else assert(kind != .binding);
+            // // We need to handle binding specially because we still need to commit it when attacking
+            // // into a Pokémon that is immune
+            // if (!showdown) {
+            //     if (kind != .miss and self.pending.binding != 0) {
+            //         assert(action.duration == 0);
+            //         action.duration = @intCast(self.pending.binding);
+            //         assert(action.durations.binding == 0);
+            //         action.durations.binding = 1;
+            //     }
+            //     if (kind == .binding) return;
+            // } else assert(kind != .binding);
 
-            // Always commit the hit result if we make it here (commit won't be called at all if the
-            // target is immune/behind a sub/etc)
-            if (self.pending.hit_probablity != 0) {
-                try self.probability.update(self.pending.hit_probablity, 256);
-                action.hit = if (self.pending.hit) .true else .false;
-            }
+            // // Always commit the hit result if we make it here (commit won't be called at all if the
+            // // target is immune/behind a sub/etc)
+            // if (self.pending.hit_probablity != 0) {
+            //     try self.probability.update(self.pending.hit_probablity, 256);
+            //     action.hit = if (self.pending.hit) .true else .false;
+            // }
 
-            if (showdown) return;
+            // if (showdown) return;
 
-            // If the move actually lands we can commit any past critical hit / damage rolls. We
-            // avoid updating anything if there wasn't a damage roll as any "critical hit" not tied
-            // to a damage roll is actually a no-op
-            if (kind == .hit and self.pending.damage_roll > 0) {
-                assert(!self.pending.crit or self.pending.crit_probablity > 0);
+            // // If the move actually lands we can commit any past critical hit / damage rolls. We
+            // // avoid updating anything if there wasn't a damage roll as any "critical hit" not tied
+            // // to a damage roll is actually a no-op
+            // if (kind == .hit and self.pending.damage_roll > 0) {
+            //     assert(!self.pending.crit or self.pending.crit_probablity > 0);
 
-                if (self.pending.crit_probablity != 0) {
-                    try self.probability.update(self.pending.crit_probablity, 256);
-                    action.critical_hit = if (self.pending.crit) .true else .false;
-                }
+            //     if (self.pending.crit_probablity != 0) {
+            //         try self.probability.update(self.pending.crit_probablity, 256);
+            //         action.critical_hit = if (self.pending.crit) .true else .false;
+            //     }
 
-                try self.probability.update(1, 39);
-                action.damage = self.pending.damage_roll;
-            }
+            //     try self.probability.update(1, 39);
+            //     action.damage = self.pending.damage_roll;
+            // }
         }
 
         pub fn clearPending(self: *Self) void {
@@ -397,12 +400,18 @@ pub fn Chance(comptime Rational: type) type {
             self.actions.p2.speed_tie = self.actions.p1.speed_tie;
         }
 
-        pub fn hit(self: *Self, ok: bool, accuracy: u8) void {
+        pub fn hit(self: *Self, player: Player, ok: bool, accuracy: u8) void {
             if (!enabled) return;
 
             const p = if (ok) accuracy else @as(u8, @intCast(256 - @as(u9, accuracy)));
-            self.pending.hit = ok;
-            self.pending.hit_probablity = p;
+            // self.pending.hit = ok;
+            // self.pending.hit_probablity = p;
+            var action = self.actions.get(player);
+
+            if (p != 0) {
+                try self.probability.update(p, 256);
+                action.hit = if (ok) .true else .false;
+            }
         }
 
         pub fn criticalHit(self: *Self, player: Player, crit: bool, rate: u8) Error!void {
@@ -988,8 +997,8 @@ const Null = struct {
         _ = .{ self, p1 };
     }
 
-    pub fn hit(self: Null, ok: bool, accuracy: u8) void {
-        _ = .{ self, ok, accuracy };
+    pub fn hit(self: Null, player: Player, ok: bool, accuracy: u8) void {
+        _ = .{ self, player, ok, accuracy };
     }
 
     pub fn criticalHit(self: Null, player: Player, crit: bool, rate: u8) Error!void {

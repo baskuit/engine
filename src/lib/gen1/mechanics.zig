@@ -2734,7 +2734,7 @@ pub const Rolls = struct {
         else
             battle.rng.next() < accuracy;
 
-        options.chance.hit(ok, accuracy);
+        options.chance.hit(player, ok, accuracy);
         return ok;
     }
 
