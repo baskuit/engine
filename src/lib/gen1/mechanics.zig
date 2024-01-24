@@ -491,10 +491,13 @@ fn beforeMove(
             stored.status -= 1;
         }
 
-        const duration = Status.duration(stored.status);
         if (!Status.is(stored.status, .EXT)) {
-            try options.chance.sleep(player, duration);
+            const roll: u32 = battle.rng.next();
+            const wake: bool = try options.chance.sleep(player, roll);
+            if (wake) stored.status = 0;
         }
+
+        const duration = Status.duration(stored.status);
 
         if (duration == 0) {
             try log.curestatus(.{ ident, before, .Message });
@@ -702,7 +705,9 @@ fn beforeMove(
         } else {
             volatiles.attacks -= 1;
         }
-        try options.chance.binding(player, volatiles.attacks);
+        const roll: u32 = battle.rng.next();
+        const free: bool = try options.chance.binding(player, roll);
+        if (free) volatiles.attacks = 0;
 
         try log.move(.{ ident, side.last_selected_move, battle.active(player.foe()) });
         if (showdown or battle.last_damage != 0) {
@@ -2853,7 +2858,8 @@ pub const Rolls = struct {
         const duration: u3 = if (options.calc.overridden(player, .duration)) |val|
             @intCast(val)
         else if (showdown)
-            battle.rng.range(u3, 1, 8)
+            // battle.rng.range(u3, 1, 8)
+            7
         else duration: {
             while (true) {
                 const r = battle.rng.next() & 7;
@@ -2917,7 +2923,8 @@ pub const Rolls = struct {
         const n: u3 = if (options.calc.overridden(player, roll)) |val|
             @intCast(val)
         else if (showdown)
-            DISTRIBUTION[battle.rng.range(u3, 0, DISTRIBUTION.len)]
+            // DISTRIBUTION[battle.rng.range(u3, 0, DISTRIBUTION.len)]
+            5
         else n: {
             const r = (battle.rng.next() & 3);
             break :n @intCast((if (r < 2) r else battle.rng.next() & 3) + 2);

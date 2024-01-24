@@ -509,12 +509,14 @@ pub fn Chance(comptime Rational: type) type {
             }
         }
 
-        pub fn sleep(self: *Self, player: Player, turns: u4) Error!void {
-            if (!enabled) return;
+        pub fn sleep(self: *Self, player: Player, roll: u32) Error!bool {
+            if (!enabled) return false;
 
             var durations = &self.actions.get(player).durations;
             const n = durations.sleep;
-            if (turns == 0) {
+            const num: u8 = 8 - @as(u4, n);
+            const wake: bool = (roll % num) == 0;
+            if (wake) {
                 assert(n >= 1 and n <= 7);
                 if (n != 7) try self.probability.update(1, 8 - @as(u4, n));
                 durations.sleep = 0;
@@ -523,6 +525,7 @@ pub fn Chance(comptime Rational: type) type {
                 try self.probability.update(8 - @as(u4, n) - 1, 8 - @as(u4, n));
                 durations.sleep += 1;
             }
+            return wake;
         }
 
         pub fn confusion(self: *Self, player: Player, turns: u4) Error!void {
@@ -573,8 +576,8 @@ pub fn Chance(comptime Rational: type) type {
             }
         }
 
-        pub fn binding(self: *Self, player: Player, turns: u4) Error!void {
-            if (!enabled) return;
+        pub fn binding(self: *Self, player: Player, roll: u32) Error!bool {
+            if (!enabled) return false;
 
             var durations = &self.actions.get(player).durations;
             const n = durations.binding;
@@ -583,7 +586,9 @@ pub fn Chance(comptime Rational: type) type {
             const p: u4 = if (n < 3) 3 else 1;
             const q: u4 = if (n < 3) 8 - ((n - 1) * p) else 2;
 
-            if (turns == 0) {
+            const free: bool = (roll % q) < p;
+
+            if (free) {
                 assert(n >= 1 and n <= 4);
                 if (n != 4) try self.probability.update(p, q);
                 durations.binding = 0;
@@ -592,6 +597,7 @@ pub fn Chance(comptime Rational: type) type {
                 try self.probability.update(q - p, q);
                 durations.binding += 1;
             }
+            return free;
         }
 
         pub fn psywave(self: *Self, player: Player, power: u8, max: u8) Error!void {
@@ -1039,8 +1045,9 @@ const Null = struct {
         _ = .{ self, field, player, target, turns };
     }
 
-    pub fn sleep(self: Null, player: Player, turns: u4) Error!void {
-        _ = .{ self, player, turns };
+    pub fn sleep(self: Null, player: Player, roll: u32) Error!bool {
+        _ = .{ self, player, roll };
+        return false;
     }
 
     pub fn disable(self: Null, player: Player, turns: u4) Error!void {
@@ -1055,8 +1062,9 @@ const Null = struct {
         _ = .{ self, player, turns };
     }
 
-    pub fn binding(self: Null, player: Player, turns: u4) Error!void {
-        _ = .{ self, player, turns };
+    pub fn binding(self: Null, player: Player, roll: u32) Error!bool {
+        _ = .{ self, player, roll };
+        return false;
     }
 
     pub fn psywave(self: Null, player: Player, power: u8, max: u8) Error!void {
