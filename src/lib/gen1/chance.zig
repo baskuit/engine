@@ -576,7 +576,7 @@ pub fn Chance(comptime Rational: type) type {
             }
         }
 
-        pub fn binding(self: *Self, player: Player, roll: u32) Error!bool {
+        pub fn binding(self: *Self, player: Player, turns: u4, roll: u32) Error!bool {
             if (!enabled) return false;
 
             var durations = &self.actions.get(player).durations;
@@ -588,7 +588,7 @@ pub fn Chance(comptime Rational: type) type {
 
             const free: bool = (roll % q) < p;
 
-            if (free) {
+            if (free or (turns == 0)) {
                 assert(n >= 1 and n <= 4);
                 if (n != 4) try self.probability.update(p, q);
                 durations.binding = 0;
@@ -1062,8 +1062,8 @@ const Null = struct {
         _ = .{ self, player, turns };
     }
 
-    pub fn binding(self: Null, player: Player, roll: u32) Error!bool {
-        _ = .{ self, player, roll };
+    pub fn binding(self: Null, player: Player, turns: u4, roll: u32) Error!bool {
+        _ = .{ self, player, turns, roll };
         return false;
     }
 

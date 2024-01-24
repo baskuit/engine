@@ -706,7 +706,7 @@ fn beforeMove(
             volatiles.attacks -= 1;
         }
         const roll: u32 = battle.rng.next();
-        const free: bool = try options.chance.binding(player, roll);
+        const free: bool = try options.chance.binding(player, volatiles.attacks, roll);
         if (free) volatiles.attacks = 0;
 
         try log.move(.{ ident, side.last_selected_move, battle.active(player.foe()) });
