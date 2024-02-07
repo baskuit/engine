@@ -56,6 +56,10 @@ export type Frame = {
   result: Result;
   c1: Choice;
   c2: Choice;
+  v1: number;
+  v2: number;
+  p1: number[];
+  p2: number[];
 } & ({
   battle: Data<Battle>;
   parsed: ParsedLine[];
@@ -137,6 +141,27 @@ function displayFrame(
     buf.push(`<pre class="side"><code>${result.p2} -&gt; ${pretty(c2)}</code></pre>`);
     buf.push('</div>');
   }
+  if (partial.v1) {
+    buf.push(`<h> ${partial.v1.toFixed(2)} </h>`);
+  }
+  if (partial.p1) {
+    buf.push('<p>');
+    for (let i = 0; i < 9; ++i) {
+      buf.push(`${partial.p1[i].toFixed(2)}, `);
+    }
+    buf.push('</p>');
+  }
+  if (partial.v2) {
+    buf.push(`<h> ${partial.v2.toFixed(2)} </h>`);
+  }
+  if (partial.p2) {
+    buf.push('<p>');
+    for (let i = 0; i < 9; ++i) {
+      buf.push(`${partial.p2[i].toFixed(2)}, `);
+    }
+    buf.push('</p>');
+  }
+
   return buf.join('');
 }
 
