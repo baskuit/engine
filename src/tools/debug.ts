@@ -34,6 +34,10 @@ class SpeciesNames implements Info {
   }
 }
 
+function byte_to_float (byte: number) {
+  return byte / 256.0;
+}
+
 export function display(gens: Generations, data: Buffer, error?: string, seed?: bigint) {
   if (!data.length) throw new Error('Invalid input');
 
@@ -83,6 +87,19 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
     if (offset >= view.byteLength) break;
 
     partial.c2 = Choice.decode(data[offset++]);
+
+    partial.p1 = [];
+    partial.p2 = [];
+
+    partial.v1 = byte_to_float(data[offset++]);
+    for (let i = 0; i < 9; ++i) {
+      partial.p1?.push(byte_to_float(data[offset++]));
+    }
+    partial.v2 = byte_to_float(data[offset++]);
+    for (let i = 0; i < 9; ++i) {
+      partial.p2?.push(byte_to_float(data[offset++]));
+    }
+    if (offset >= view.byteLength) break;
 
     frames.push(partial as Frame);
     partial = undefined;
