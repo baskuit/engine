@@ -56,6 +56,10 @@ export type Frame = {
   result: Result;
   c1: Choice;
   c2: Choice;
+  v1: number;
+  v2: number;
+  p1: number[];
+  p2: number[];
 } & ({
   battle: Data<Battle>;
   parsed: ParsedLine[];

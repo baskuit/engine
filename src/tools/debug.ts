@@ -84,6 +84,14 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
 
     partial.c2 = Choice.decode(data[offset++]);
 
+    partial.v1 = 0;
+    partial.v2 = 0;
+    for (let i = 0; i < 9; ++i) {
+      partial.p1?.push(0);
+      
+    }
+    
+
     frames.push(partial as Frame);
     partial = undefined;
   }
