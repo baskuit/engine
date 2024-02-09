@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 
-import {Generation, Generations} from '@pkmn/data';
+import { Generation, Generations } from '@pkmn/data';
 
-import {Battle, Choice, Info, Log, Result, SideInfo} from '../pkg';
+import { Battle, Choice, Info, Log, Result, SideInfo } from '../pkg';
 import * as addon from '../pkg/addon';
-import {Data, LAYOUT, LE, Lookup} from '../pkg/data';
+import { Data, LAYOUT, LE, Lookup } from '../pkg/data';
 import * as gen1 from '../pkg/gen1';
-import {Frame, render} from '../test/display';
+import { Frame, render } from '../test/display';
 
 class SpeciesNames implements Info {
   gen: Generation;
@@ -21,21 +21,21 @@ class SpeciesNames implements Info {
     const [p1] = Array.from(this.battle.sides);
     const team = Array.from(p1.pokemon)
       .sort((a, b) => a.position - b.position)
-      .map(p => ({species: p.stored.species}));
-    return new SideInfo(this.gen, {name: 'Player 1', team});
+      .map(p => ({ species: p.stored.species }));
+    return new SideInfo(this.gen, { name: 'Player 1', team });
   }
 
   get p2() {
     const [, p2] = Array.from(this.battle.sides);
     const team = Array.from(p2.pokemon)
       .sort((a, b) => a.position - b.position)
-      .map(p => ({species: p.stored.species}));
-    return new SideInfo(this.gen, {name: 'Player 2', team});
+      .map(p => ({ species: p.stored.species }));
+    return new SideInfo(this.gen, { name: 'Player 2', team });
   }
 }
 
-function byte_to_float (byte: number) {
-  return byte / 256.0;
+function byte_to_float(byte: number) {
+  return byte / 255.0;
 }
 
 export function display(gens: Generations, data: Buffer, error?: string, seed?: bigint) {
@@ -55,7 +55,7 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
     // We don't care about the native addon, we just need to load it so other checks don't fail
     void addon.supports(true);
     switch (gen.num) {
-      case 1: return new gen1.Battle(lookup, Data.view(buf), {showdown});
+      case 1: return new gen1.Battle(lookup, Data.view(buf), { showdown });
       default: throw new Error(`Unsupported gen: ${gen.num}`);
     }
   };
@@ -67,7 +67,7 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
   let partial: Partial<Frame> | undefined = undefined;
   const frames: Frame[] = [];
   while (offset < view.byteLength) {
-    partial = {parsed: []};
+    partial = { parsed: [] };
     const it = log.parse(Data.view(data.subarray(offset)))[Symbol.iterator]();
     let r = it.next();
     while (!r.done) {
@@ -90,14 +90,23 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
 
     partial.p1 = [];
     partial.p2 = [];
+    partial.l1 = [];
+    partial.l2 = [];
+    partial.n1 = 0;
+    partial.n2 = 0;
 
     partial.v1 = byte_to_float(data[offset++]);
-    for (let i = 0; i < 9; ++i) {
-      partial.p1?.push(byte_to_float(data[offset++]));
+    partial.n1 = data[offset++];
+    for (let i = 0; i < partial.n1; ++i) {
+      partial.l1.push(Choice.decode(data[offset++]));
+      partial.p1.push(byte_to_float(data[offset++]));
     }
     partial.v2 = byte_to_float(data[offset++]);
-    for (let i = 0; i < 9; ++i) {
-      partial.p2?.push(byte_to_float(data[offset++]));
+    partial.n2 = data[offset++];
+    for (let i = 0; i < partial.n2; ++i) {
+      partial.l2.push(Choice.decode(data[offset++]));
+      partial.p2.push(byte_to_float(data[offset++]));
+
     }
     if (offset >= view.byteLength) break;
 
