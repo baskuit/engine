@@ -133,18 +133,8 @@ function displayFrame(
     }
     buf.push('</pre></div>');
   }
-  if ('battle' in partial && partial.battle) {
-    buf.push(displayBattle(gen, showdown, partial.battle, last as Data<Battle>));
-  } else if ('seed' in partial && partial.seed) {
-    buf.push(`<div class="seed">${partial.seed.join(', ')}</div>`);
-  }
-  if (partial.result) {
-    const {result, c1, c2} = partial;
-    buf.push('<div class="sides" style="text-align: center;">');
-    buf.push(`<pre class="side"><code>${result.p1} -&gt; ${pretty(c1)}</code></pre>`);
-    buf.push(`<pre class="side"><code>${result.p2} -&gt; ${pretty(c2)}</code></pre>`);
-    buf.push('</div>');
-  }
+
+  // eval data
   if (partial.v1) {
     buf.push(`<h> ${partial.v1.toFixed(2)} </h>`);
   }
@@ -164,6 +154,19 @@ function displayFrame(
       buf.push(`<b>${pretty(partial.l2[i])}</b> : ${partial.p2[i].toFixed(2)}, `);
     }
     buf.push('</p>');
+  }
+
+  if ('battle' in partial && partial.battle) {
+    buf.push(displayBattle(gen, showdown, partial.battle, last as Data<Battle>));
+  } else if ('seed' in partial && partial.seed) {
+    buf.push(`<div class="seed">${partial.seed.join(', ')}</div>`);
+  }
+  if (partial.result) {
+    const {result, c1, c2} = partial;
+    buf.push('<div class="sides" style="text-align: center;">');
+    buf.push(`<pre class="side"><code>${result.p1} -&gt; ${pretty(c1)}</code></pre>`);
+    buf.push(`<pre class="side"><code>${result.p2} -&gt; ${pretty(c2)}</code></pre>`);
+    buf.push('</div>');
   }
 
   return buf.join('');
