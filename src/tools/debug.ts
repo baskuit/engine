@@ -6,7 +6,7 @@ import {Battle, Choice, Info, Log, Result, SideInfo} from '../pkg';
 import * as addon from '../pkg/addon';
 import {Data, LAYOUT, LE, Lookup} from '../pkg/data';
 import * as gen1 from '../pkg/gen1';
-import {Frame, render} from '../test/display';
+import {Frame, SideData, render} from '../test/display';
 
 class SpeciesNames implements Info {
   gen: Generation;
@@ -32,6 +32,10 @@ class SpeciesNames implements Info {
       .map(p => ({species: p.stored.species}));
     return new SideInfo(this.gen, {name: 'Player 2', team});
   }
+}
+
+export function read_float (data: Buffer, offset: number) {
+  return data.slice(offset, offset + 4).readFloatLE();
 }
 
 export function display(gens: Generations, data: Buffer, error?: string, seed?: bigint) {
@@ -83,6 +87,58 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
     if (offset >= view.byteLength) break;
 
     partial.c2 = Choice.decode(data[offset++]);
+
+    partial.rows = data[offset++];
+    partial.cols = data[offset++];
+
+    partial.row_side_data = {
+      value: NaN,
+      row_policy: [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+      col_policy: [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+      matrices: [],
+    };
+    partial.col_side_data = {
+      value: NaN,
+      row_policy: [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+      col_policy: [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+      matrices: [],
+    };
+    
+    {
+      partial.row_side_data!.value = read_float(data, offset);
+      offset += 4;
+      for (let i = 0; i < partial.rows; ++i) {
+        partial.row_side_data!.row_policy[i] = read_float(data, offset);
+        offset += 4;
+      }
+      for (let i = 0; i < partial.cols; ++i) {
+        partial.row_side_data!.col_policy[i] = read_float(data, offset);
+        offset += 4;
+      }
+      const n_matrices = data[offset++];
+      for (let m = 0; m < n_matrices; ++m) {
+        // TODO lol
+      }
+    };
+
+    {
+      partial.col_side_data!.value = read_float(data, offset);
+      offset += 4;
+      for (let i = 0; i < partial.rows; ++i) {
+        partial.col_side_data!.row_policy[i] = read_float(data, offset);
+        offset += 4;
+      }
+      for (let i = 0; i < partial.cols; ++i) {
+        partial.col_side_data!.col_policy[i] = read_float(data, offset);
+        offset += 4;
+      }
+      const n_matrices = data[offset++];
+      for (let m = 0; m < n_matrices; ++m) {
+        // TODO lol
+        // process_matrix(data, offset);
+      }
+    };
+
 
     frames.push(partial as Frame);
     partial = undefined;

@@ -52,10 +52,22 @@ const debug = (s: string) => s.startsWith('|debug')
 
 export const toText = (parsed: ParsedLine[]) => `|${parsed.map(compact).join('\n|')}`;
 
+export type SideData = {
+  value: number;
+  row_policy: number[];
+  col_policy: number[];
+  matrices: any[][];
+};
+
 export type Frame = {
   result: Result;
   c1: Choice;
   c2: Choice;
+  rows: number;
+  cols: number;
+  row_side_data: SideData;
+  col_side_data: SideData;
+
 } & ({
   battle: Data<Battle>;
   parsed: ParsedLine[];
@@ -137,6 +149,15 @@ function displayFrame(
     buf.push(`<pre class="side"><code>${result.p2} -&gt; ${pretty(c2)}</code></pre>`);
     buf.push('</div>');
   }
+
+  if (partial.row_side_data) {
+
+  }
+
+  if (partial.col_side_data) {
+    
+  }
+
   return buf.join('');
 }
 
