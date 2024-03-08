@@ -6,7 +6,7 @@ import {Icons, Sprites} from '@pkmn/img';
 import {minify} from 'html-minifier';
 import * as mustache from 'mustache';
 
-import {Battle, Choice, Data, ParsedLine, Pokemon, Result, Side} from '../pkg';
+import {Battle, Choice, Data, ParsedLine, Pokemon, Result, Side, SideInfo} from '../pkg';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const template = (s: 'pkmn' | 'showdown') =>
@@ -138,7 +138,7 @@ function displayFrame(
     buf.push('</pre></div>');
   }
   if ('battle' in partial && partial.battle) {
-    buf.push(displayBattle(gen, showdown, partial.battle, last as Data<Battle>));
+    buf.push(displayBattle(gen, showdown, partial, partial.battle, last as Data<Battle>));
   } else if ('seed' in partial && partial.seed) {
     buf.push(`<div class="seed">${partial.seed.join(', ')}</div>`);
   }
@@ -150,20 +150,13 @@ function displayFrame(
     buf.push('</div>');
   }
 
-  if (partial.row_side_data) {
-
-  }
-
-  if (partial.col_side_data) {
-    
-  }
-
   return buf.join('');
 }
 
 function displayBattle(
   gen: Generation,
   showdown: boolean,
+  partial: Partial<Frame>,
   battle: Data<Battle>,
   last?: Data<Battle>,
 ) {
@@ -181,8 +174,8 @@ function displayBattle(
   buf.push('<div class="sides">');
   const [p1, p2] = Array.from(battle.sides);
   const [o1, o2] = last ? Array.from(last.sides) : [undefined, undefined];
-  buf.push(displaySide(gen, showdown, battle, 'p1', p1, o1));
-  buf.push(displaySide(gen, showdown, battle, 'p2', p2, o2));
+  buf.push(displaySide(gen, showdown, partial, battle, 'p1', p1, o1));
+  buf.push(displaySide(gen, showdown, partial, battle, 'p2', p2, o2));
   buf.push('</div>');
   buf.push('</div>');
   return buf.join('');
@@ -191,6 +184,7 @@ function displayBattle(
 function displaySide(
   gen: Generation,
   showdown: boolean,
+  partial: Partial<Frame>,
   battle: Data<Battle>,
   player: 'p1' | 'p2',
   side: Side,
@@ -198,6 +192,31 @@ function displaySide(
 ) {
   const buf = [];
   buf.push(`<div class="side ${player}">`);
+
+  const data: SideData = player === 'p1' ? partial.row_side_data! : partial.col_side_data!;
+  const our_policy: number[] = player === 'p1' ? data.row_policy : data.col_policy;
+  const their_policy: number[] = player === 'p1' ? data.col_policy : data.row_policy;
+  const our_n = player === 'p1' ? partial.rows : partial.cols;
+  const their_n = player === 'p1' ? partial.cols : partial.rows;
+  const their_align = player === 'p1' ? 'right' : 'left';
+
+  // value
+  buf.push(`<div>`);
+  buf.push(`${data.value.toFixed(3)}`);
+  buf.push('</div>');
+  // our policy
+  buf.push('<div><p align=center>')
+  for (let idx = 0; idx < our_n!; ++idx) {
+    buf.push(`${our_policy[idx].toFixed(3)}    `);
+  }
+  buf.push('</p></div>')
+  // opp policy
+  buf.push(`<div><p align=${their_align}>`)
+    for (let idx = 0; idx < their_n!; ++idx) {
+    buf.push(`${their_policy[idx].toFixed(3)}    `);
+  }
+  buf.push('</p></div>')
+
   if (battle.turn) {
     buf.push('<div class="details">');
     const used = side.lastUsedMove ? gen.moves.get(side.lastUsedMove)!.name : '<em>None</em>';
