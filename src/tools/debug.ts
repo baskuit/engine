@@ -68,13 +68,16 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
   const frames: Frame[] = [];
   while (offset < view.byteLength) {
     partial = {parsed: []};
-    const it = log.parse(Data.view(data.subarray(offset)))[Symbol.iterator]();
-    let r = it.next();
-    while (!r.done) {
-      partial.parsed!.push(r.value);
-      r = it.next();
+    if (N > 0) {
+      const it = log.parse(Data.view(data.subarray(offset)))[Symbol.iterator]();
+      let r = it.next();
+      while (!r.done) {
+        partial.parsed!.push(r.value);
+        r = it.next();
+      }
     }
-    offset += N || r.value;
+
+    offset += N;
     if (offset >= view.byteLength) break;
 
     partial.battle = deserialize(data.subarray(offset, offset += size));
@@ -90,7 +93,7 @@ export function display(gens: Generations, data: Buffer, error?: string, seed?: 
 
     partial.rows = data[offset++];
     partial.cols = data[offset++];
-
+    
     partial.row_side_data = {
       value: NaN,
       row_policy: [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
