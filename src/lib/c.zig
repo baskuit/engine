@@ -181,3 +181,16 @@ export fn pkmn_gen1_battle_choices(
     assert(!pkmn.options.showdown or len > 0);
     return battle.choices(@enumFromInt(player), @enumFromInt(request), @ptrCast(out[0..len]));
 }
+
+export fn pkmn_gen1_battle_choices_no_switch(
+    battle: *const pkmn.gen1.Battle(pkmn.gen1.PRNG),
+    player: u8,
+    request: u8,
+    out: [*]u8,
+    len: usize,
+) u8 {
+    assert(player <= @typeInfo(pkmn.Player).Enum.fields.len);
+    assert(request <= @typeInfo(pkmn.Choice.Type).Enum.fields.len);
+    assert(!pkmn.options.showdown or len > 0);
+    return battle.choices_no_switch(@enumFromInt(player), @enumFromInt(request), @ptrCast(out[0..len]));
+}

@@ -115,6 +115,10 @@ pub fn Battle(comptime RNG: anytype) type {
         pub fn choices(self: *const Self, player: Player, request: Choice.Type, out: []Choice) u8 {
             return mechanics.choices(self, player, request, out);
         }
+
+        pub fn choices_no_switch(self: *const Self, player: Player, request: Choice.Type, out: []Choice) u8 {
+            return mechanics.choices_no_switch(self, player, request, out);
+        }
     };
 }
 
