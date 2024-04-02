@@ -276,6 +276,13 @@ uint8_t pkmn_gen1_battle_choices(
   pkmn_choice out[],
   size_t len);
 
+uint8_t pkmn_gen1_battle_choices_no_switch(
+  const pkmn_gen1_battle *battle,
+  pkmn_player player,
+  pkmn_choice_kind request,
+  pkmn_choice out[],
+  size_t len);
+
 #undef PKMN_OPAQUE
 
 #ifdef __cplusplus
