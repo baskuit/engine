@@ -2732,13 +2732,14 @@ pub const Rolls = struct {
     }
 
     fn hit(battle: anytype, player: Player, accuracy: u8, options: anytype) bool {
-        const ok = if (options.calc.overridden(player, .hit)) |val|
-            val == .true
-        else if (showdown)
-            battle.rng.chance(u8, accuracy, 256)
-        else
-            battle.rng.next() < accuracy;
-
+        var ok: bool = true;
+        if (showdown) {
+            if (accuracy != 255) {
+                ok = battle.rng.chance(u8, accuracy, 256);
+            }
+        } else {
+            ok = battle.rng.next() < accuracy;
+        }
         options.chance.hit(player, ok, accuracy);
         return ok;
     }

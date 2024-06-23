@@ -409,7 +409,9 @@ pub fn Chance(comptime Rational: type) type {
             var action = self.actions.get(player);
 
             if (p != 0) {
-                try self.probability.update(p, 256);
+                if (p != 255) {
+                    try self.probability.update(p, 256);
+                }
                 action.hit = if (ok) .true else .false;
             }
         }
