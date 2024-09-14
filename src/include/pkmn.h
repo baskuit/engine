@@ -144,9 +144,9 @@ void pkmn_rational_init(pkmn_rational *rational);
 /** Normalize the rational by reducing by the greatest common divisor. */
 void pkmn_rational_reduce(pkmn_rational *rational);
 /** Returns the numerator of the rational. */
-float64_t pkmn_rational_numerator(pkmn_rational *rational);
+float64_t pkmn_rational_numerator(const pkmn_rational *rational);
 /** Returns the denominator of the rational. */
-float64_t pkmn_rational_denominator(pkmn_rational *rational);
+float64_t pkmn_rational_denominator(const pkmn_rational *rational);
 
 /** The size in bytes of a Generation I battle. */
 #define PKMN_GEN1_BATTLE_SIZE 384
