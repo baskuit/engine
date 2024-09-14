@@ -73,11 +73,11 @@ export fn pkmn_rational_reduce(rational: *pkmn.Rational(f64)) void {
     rational.reduce();
 }
 
-export fn pkmn_rational_numerator(rational: *pkmn.Rational(f64)) f64 {
+export fn pkmn_rational_numerator(rational: *const pkmn.Rational(f64)) f64 {
     return rational.p;
 }
 
-export fn pkmn_rational_denominator(rational: *pkmn.Rational(f64)) f64 {
+export fn pkmn_rational_denominator(rational: *const pkmn.Rational(f64)) f64 {
     return rational.q;
 }
 
