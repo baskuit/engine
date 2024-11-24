@@ -1,11 +1,12 @@
 /** @license MIT modified from Pixabay's https://github.com/Pixabay/JavaScript-autoComplete */
+import {Fragment} from './dom';
 
 const FRAME_MS = 20;
 // const DELAY_MS = 150;
 const HIDE_MS = 350;
 
 export const Select = ({options, unmount, placeholder, render}: {
-  options: string[];
+  options: string[] ;
   unmount?: Promise<void>;
   placeholder?: string;
   render?: (option: string, search: string) => JSX.Element;
@@ -174,7 +175,7 @@ export const Select = ({options, unmount, placeholder, render}: {
     return true;
   });
 
-  let timer: number;
+  // let timer: number;
   const keys =
     ['End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'Enter', 'Escape'];
   input.addEventListener('keyup', e => {
@@ -183,7 +184,7 @@ export const Select = ({options, unmount, placeholder, render}: {
       const val = input.value;
       if (val !== last) {
         last = val;
-        clearTimeout(timer);
+        // clearTimeout(timer);
         if (cache) if (val in cache) return suggest(cache[val]);
         // timer = setTimeout(() => suggest(searcher.search(val)), DELAY_MS) as any as number;
       }

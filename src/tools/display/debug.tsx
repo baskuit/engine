@@ -2,6 +2,7 @@ import * as engine from '../../pkg';
 import {LAYOUT, LE} from '../../pkg/data';
 import * as gen1 from '../../pkg/gen1';
 
+import {Fragment} from './dom';
 import {Battle, Gen, Generation, adapt} from './ui';
 import * as util from './util';
 
