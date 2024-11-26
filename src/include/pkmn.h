@@ -153,7 +153,7 @@ float64_t pkmn_rational_denominator(const pkmn_rational *rational);
 /** The size in bytes of Generation I chance actions. */
 #define PKMN_GEN1_CHANCE_ACTIONS_SIZE 16
 /** The size in bytes of Generation I chance durations. */
-#define PKMN_GEN1_CHANCE_DURATIONS_SIZE 4
+#define PKMN_GEN1_CHANCE_DURATIONS_SIZE 8
 /** The size in bytes of a Generation I calc overrides. */
 #define PKMN_GEN1_CALC_OVERRIDES_SIZE 24
 /** The size in bytes of a Generation I calc summaries. */
