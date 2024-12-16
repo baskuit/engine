@@ -1,6 +1,6 @@
 /** @license MIT modified from Vadim Demedes's https://github.com/vadimdemedes/dom-chef */
 type Attributes = JSX.IntrinsicElements['div'];
-type DocumentFragmentConstructor = typeof DocumentFragment;
+type DocumentFragmentFunction = (props?: any) => DocumentFragment;
 type ElementFunction = (props?: any) => HTMLElement;
 
 declare global {
@@ -21,9 +21,6 @@ interface Fragment {
 
 // https://github.com/preactjs/preact/blob/1bbd687c/src/constants.js#L3
 const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
-
-const isFragment = (type: DocumentFragmentConstructor | ElementFunction):
-  type is DocumentFragmentConstructor => type === DocumentFragment;
 
 const setCSSProps = (element: HTMLElement, style: CSSStyleDeclaration) => {
   for (const [name, value] of Object.entries(style)) {
@@ -57,12 +54,12 @@ const addChildren = (parent: Element | DocumentFragment, children: Node[]) => {
 const FALSIFIABLE_ATTRIBUTES = ['contentEditable', 'draggable', 'spellCheck', 'value'];
 
 export const h = (
-  type: DocumentFragmentConstructor | ElementFunction | string,
+  type: DocumentFragmentFunction | ElementFunction | string,
   attributes?: Attributes,
   ...children: Node[]
 ) => {
   if (typeof type !== 'string') {
-    const element = isFragment(type) ? document.createDocumentFragment() : type(attributes);
+    const element = type(attributes);
     addChildren(element, children);
     return element;
   }
@@ -92,5 +89,5 @@ export const h = (
   return element;
 };
 
-export const Fragment =
-  (typeof DocumentFragment === 'function' ? DocumentFragment : () => {}) as Fragment;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const Fragment = (unused: any) => document.createDocumentFragment();
