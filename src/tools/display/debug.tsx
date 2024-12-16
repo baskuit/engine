@@ -2,7 +2,6 @@ import * as engine from '../../pkg';
 import {LAYOUT, LE} from '../../pkg/data';
 import * as gen1 from '../../pkg/gen1';
 
-import {Fragment} from './dom';
 import {Battle, Gen, Generation, adapt} from './ui';
 import * as util from './util';
 
@@ -100,11 +99,11 @@ const App = ({gen, data, error, seed}: {
   }
   frames.push(<Frame frame={partial || {}} gen={gen} showdown={showdown} last={last} />);
 
-  return <>
+  return <div>
     {!!seed && <h1>0x{seed.toString(16).toUpperCase()}</h1>}
     {frames}
     {error && <pre className='error'><code>{error}</code></pre>}
-  </>;
+  </div>;
 };
 
 const Frame = ({frame, gen, showdown, last}: {

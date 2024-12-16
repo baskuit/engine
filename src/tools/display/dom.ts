@@ -92,4 +92,5 @@ export const h = (
   return element;
 };
 
-export const Fragment = (props: {children: any}) => props.children as Fragment;
+export const Fragment =
+  (typeof DocumentFragment === 'function' ? DocumentFragment : () => {}) as Fragment;

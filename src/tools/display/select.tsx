@@ -1,12 +1,11 @@
 /** @license MIT modified from Pixabay's https://github.com/Pixabay/JavaScript-autoComplete */
-import {Fragment} from './dom';
 
 const FRAME_MS = 20;
 // const DELAY_MS = 150;
 const HIDE_MS = 350;
 
 export const Select = ({options, unmount, placeholder, render}: {
-  options: string[] ;
+  options: string[];
   unmount?: Promise<void>;
   placeholder?: string;
   render?: (option: string, search: string) => JSX.Element;
@@ -20,8 +19,8 @@ export const Select = ({options, unmount, placeholder, render}: {
 
   render ||= option => input.value
     // ? <span dangerouslySetInnerHTML={{__html: searcher.highlight(option)}}></span>
-    ? <>{option}</>
-    : <>{option}</>;
+    ? <span>{option}</span>
+    : <span>{option}</span>;
 
   let maxHeight = 0;
   let offsetHeight = 0;
