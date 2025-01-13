@@ -7,7 +7,7 @@ import * as tty from 'tty';
 
 import {Generation, GenerationNum, Generations} from '@pkmn/data';
 import {Protocol} from '@pkmn/protocol';
-import {Battle, BattleStreams, Dex, ID, PRNG, PRNGSeed, Streams, Teams, toID} from '@pkmn/sim';
+import {Battle, BattleStreams, Dex, ID, PRNG, Streams, Teams, toID} from '@pkmn/sim';
 import * as sim from '@pkmn/sim/tools';
 import {minify} from 'html-minifier';
 import minimist from 'minimist';
@@ -19,7 +19,7 @@ import {LAYOUT, LE} from '../pkg/data';
 import {error, render} from '../tools/debug';
 import * as display from '../tools/display';
 
-import {Choices, FILTER, formatFor, patch} from './showdown';
+import {Choices, FILTER, PRNGSeed, formatFor, patch} from './showdown';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const ANSI = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
@@ -73,7 +73,7 @@ class Runner {
     // try again! (note that validate marks used to ensure progress)
     if (this.skip) return Promise.resolve();
 
-    const seed = this.prng.seed.slice() as PRNGSeed;
+    const seed = this.prng.getSeed().slice() as PRNGSeed;
     const create = (o: sim.AIOptions) => (s: Streams.ObjectReadWriteStream<string>) =>
       o.createAI(s, {seed: newSeed(this.prng), move: 0.7, mega: 0.6, ...o});
 
@@ -238,7 +238,7 @@ function play(
       }
 
       const request = partial.showdown.result = toResult(control, p1options.spec.name);
-      partial.showdown.seed = control.prng.seed.slice();
+      partial.showdown.seed = control.prng.getSeed().slice() as PRNGSeed;
 
       const chunk = control.getDebugLog();
       partial.showdown.chunk = chunk;
@@ -253,7 +253,7 @@ function play(
 
       compare(chunk, parsed);
       assert.deepEqual(result, request);
-      assert.deepEqual(battle.prng, control.prng.seed);
+      assert.deepEqual(battle.prng, control.prng.getSeed());
 
       if (replay && index >= replay.length) break;
       [c1, c2] = getChoices();
@@ -272,7 +272,7 @@ function play(
     } while (!control.ended);
 
     if (control.ended) assert.notEqual(result.type, undefined);
-    assert.deepEqual(battle.prng, control.prng.seed);
+    assert.deepEqual(battle.prng, control.prng.getSeed());
   } catch (err: any) {
     if (!replay) {
       const num = toBigInt(seed);
@@ -831,7 +831,7 @@ export async function run(gens: Generations, options: string | Flags, errors?: E
 }
 
 export function newSeed(prng: PRNG): PRNGSeed {
-  return [prng.next(0x10000), prng.next(0x10000), prng.next(0x10000), prng.next(0x10000)];
+  return [prng.random(0x10000), prng.random(0x10000), prng.random(0x10000), prng.random(0x10000)];
 }
 
 export function toBigInt(seed: PRNGSeed): bigint {
@@ -896,13 +896,13 @@ if (require.main === module) {
       unit ? +argv.duration.slice(0, -1) * {s: 1e3, m: 6e4, h: 3.6e6}[unit]! : argv.duration;
     argv.cycles = argv.cycles ?? (duration ? 1 : 10);
     const prng = new PRNG(argv.seed ? argv.seed.split(',').map((s: string) => Number(s)) : null);
-    if (!argv.seed) console.error('Seed:', prng.seed.join(','));
+    if (!argv.seed) console.error('Seed:', prng.getSeed().join(','));
     const options = {prng, log: process.stdout.isTTY, ...argv, duration};
 
     const errors = argv.summary ? new Errors() : undefined;
     const code = await run(gens, options, errors);
     if (code && errors) {
-      const file = path.join(ROOT, 'logs', `${prng.seed.join('-')}.html`);
+      const file = path.join(ROOT, 'logs', `${prng.getSeed().join('-')}.html`);
       const link = path.join(ROOT, 'logs', 'summary.html');
       fs.writeFileSync(file, errors.toString());
       symlink(file, link);

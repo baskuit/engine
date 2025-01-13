@@ -9688,7 +9688,6 @@ test "Substitute + Confusion glitch" {
         try t.log.expected.move(.{ P2.ident(1), Move.Supersonic, P1.ident(1) });
         try t.log.expected.fail(.{ P1.ident(1), .None });
         try t.log.expected.activate(.{ P1.ident(1), .Confusion });
-        if (showdown) try t.log.expected.activate(.{ P1.ident(1), .Substitute });
         try t.log.expected.turn(.{4});
 
         // Pokémon Showdown incorrectly applies damage to the confused Pokémon's sub when
@@ -9696,7 +9695,7 @@ test "Substitute + Confusion glitch" {
         try expectEqual(Result.Default, try t.update(move(3), move(1)));
         // (140/256) * (2/3) * (1/2) vs.  (2/3) * (1/2)
         try if (showdown) t.expectProbability(35, 192) else t.expectProbability(1, 3);
-        try expectEqual(@as(u8, if (showdown) 2 else 7), t.actual.p1.active.volatiles.substitute);
+        try expectEqual(@as(u8, 7), t.actual.p1.active.volatiles.substitute);
 
         try t.verify();
     }

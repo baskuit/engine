@@ -7205,8 +7205,7 @@ describe('Gen 1', () => {
       // selecting a self-targeting move
       battle.makeChoices('move 3', 'move 1');
       expect(battle.p1.pokemon[0].hp).toBe(p1hp);
-      // expect(battle.p1.pokemon[0].volatiles['substitute'].hp).toBe(7);
-      expect(battle.p1.pokemon[0].volatiles['substitute'].hp).toBe(2);
+      expect(battle.p1.pokemon[0].volatiles['substitute'].hp).toBe(7);
 
       verify(battle, [
         '|move|p2a: Zubat|Supersonic|p1a: Bulbasaur',
@@ -7223,7 +7222,6 @@ describe('Gen 1', () => {
         '|move|p2a: Zubat|Supersonic|p1a: Bulbasaur',
         '|-fail|p1a: Bulbasaur',
         '|-activate|p1a: Bulbasaur|confusion',
-        '|-activate|p1a: Bulbasaur|Substitute|[damage]',
         '|turn|4',
       ]);
     }

@@ -5,13 +5,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {Generation, Generations, ID, PokemonSet, StatsTable} from '@pkmn/data';
-import {Battle, Dex, PRNG, PRNGSeed, Pokemon, Side, SideID, Teams} from '@pkmn/sim';
+import {Battle, Dex, PRNG, Pokemon, Side, SideID, Teams} from '@pkmn/sim';
 import minimist from 'minimist';
 
 import * as engine from '../pkg';
 
 import {newSeed, toBigInt} from './integration';
-import {Choices, formatFor, patch} from './showdown';
+import {Choices, PRNGSeed, formatFor, patch} from './showdown';
 import {decimal, regression, summarize} from './stats';
 
 const BLOCKLIST = ['mimic', 'metronome', 'mirrormove', 'transform'] as ID[];
@@ -43,15 +43,15 @@ export const Options = new class {
     const lookup = engine.Lookup.get(gen);
 
     const team: Partial<PokemonSet>[] = [];
-    const n = prng.randomChance(1, 100) ? prng.next(1, 5 + 1) : 6;
+    const n = prng.randomChance(1, 100) ? prng.random(1, 5 + 1) : 6;
     for (let i = 0; i < n; i++) {
-      const species = lookup.speciesByNum(prng.next(1, 151 + 1));
-      const level = prng.randomChance(1, 20) ? prng.next(1, 99 + 1) : 100;
+      const species = lookup.speciesByNum(prng.random(1, 151 + 1));
+      const level = prng.randomChance(1, 20) ? prng.random(1, 99 + 1) : 100;
 
       const ivs = {} as StatsTable;
       for (const stat of gen.stats) {
         if (stat === 'hp' || stat === 'spd') continue;
-        ivs[stat] = gen.stats.toIV(prng.randomChance(1, 5) ? prng.next(1, 15 + 1) : 15);
+        ivs[stat] = gen.stats.toIV(prng.randomChance(1, 5) ? prng.random(1, 15 + 1) : 15);
       }
       ivs.hp = gen.stats.toIV(gen.stats.getHPDV(ivs));
       ivs.spd = ivs.spa;
@@ -59,16 +59,16 @@ export const Options = new class {
       const evs = {} as StatsTable;
       for (const stat of gen.stats) {
         if (stat === 'spd') break;
-        const exp = prng.randomChance(1, 20) ? prng.next(0, 0xFFFF + 1) : 0xFFFF;
+        const exp = prng.randomChance(1, 20) ? prng.random(0, 0xFFFF + 1) : 0xFFFF;
         evs[stat] = Math.min(255, Math.trunc(Math.ceil(Math.sqrt(exp))));
       }
       evs.spd = evs.spa;
 
       const moves: ID[] = [];
-      const m = prng.randomChance(1, 100) ? prng.next(1, 3 + 1) : 4;
+      const m = prng.randomChance(1, 100) ? prng.random(1, 3 + 1) : 4;
       for (let j = 0; j < m; j++) {
         let move: ID;
-        while (moves.includes((move = lookup.moveByNum(prng.next(1, 164 + 1)))) ||
+        while (moves.includes((move = lookup.moveByNum(prng.random(1, 164 + 1)))) ||
           BLOCKLIST.includes(move));
         moves.push(move);
       }
@@ -83,36 +83,36 @@ export const Options = new class {
     const lookup = engine.Lookup.get(gen);
 
     const team: Partial<PokemonSet>[] = [];
-    const n = prng.randomChance(1, 100) ? prng.next(1, 5 + 1) : 6;
+    const n = prng.randomChance(1, 100) ? prng.random(1, 5 + 1) : 6;
     for (let i = 0; i < n; i++) {
-      const species = lookup.speciesByNum(prng.next(1, 251 + 1));
-      const level = prng.randomChance(1, 20) ? prng.next(1, 99 + 1) : 100;
+      const species = lookup.speciesByNum(prng.random(1, 251 + 1));
+      const level = prng.randomChance(1, 20) ? prng.random(1, 99 + 1) : 100;
       const item = prng.randomChance(1, 10) ? undefined
-        : lookup.itemByNum(prng.next(1, 62 + 1));
+        : lookup.itemByNum(prng.random(1, 62 + 1));
 
       const ivs = {} as StatsTable;
       for (const stat of gen.stats) {
         if (stat === 'hp' || stat === 'spd') continue;
-        ivs[stat] = gen.stats.toIV(prng.randomChance(1, 5) ? prng.next(1, 15 + 1) : 15);
+        ivs[stat] = gen.stats.toIV(prng.randomChance(1, 5) ? prng.random(1, 15 + 1) : 15);
       }
       ivs.hp = gen.stats.toIV(gen.stats.getHPDV(ivs));
       ivs.spd = ivs.spa;
 
       const evs = {} as StatsTable;
       for (const stat of gen.stats) {
-        const exp = prng.randomChance(1, 20) ? prng.next(0, 0xFFFF + 1) : 0xFFFF;
+        const exp = prng.randomChance(1, 20) ? prng.random(0, 0xFFFF + 1) : 0xFFFF;
         evs[stat] = Math.min(255, Math.trunc(Math.ceil(Math.sqrt(exp))));
       }
 
       const moves: ID[] = [];
-      const m = prng.randomChance(1, 100) ? prng.next(1, 3 + 1) : 4;
+      const m = prng.randomChance(1, 100) ? prng.random(1, 3 + 1) : 4;
       for (let j = 0; j < m; j++) {
         let move: ID;
-        while (moves.includes((move = lookup.moveByNum(prng.next(1, 250 + 1)))));
+        while (moves.includes((move = lookup.moveByNum(prng.random(1, 250 + 1)))));
         moves.push(move);
       }
 
-      const happiness = prng.randomChance(1, 10 + 1) ? prng.next(0, 255) : 255;
+      const happiness = prng.randomChance(1, 10 + 1) ? prng.random(0, 255) : 255;
       team.push({species, level, item, ivs, evs, moves, happiness});
     }
 
@@ -202,9 +202,9 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
           battle.setPlayer('p2', {name: 'Player B', team: team2});
           while (!battle.ended) {
             let possible = choices(battle, 'p1');
-            const c1 = possible[p1.next(possible.length)];
+            const c1 = possible[p1.random(possible.length)];
             possible = choices(battle, 'p2');
-            const c2 = possible[p2.next(possible.length)];
+            const c2 = possible[p2.random(possible.length)];
             battle.makeChoices(c1, c2);
           }
           turns += battle.turn;
@@ -213,7 +213,7 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         }
       }
 
-      return Promise.resolve([duration, turns, serialize(prng.seed)] as const);
+      return Promise.resolve([duration, turns, serialize(prng.getSeed() as PRNGSeed)] as const);
     },
   },
   '@pkmn/engine': {
@@ -232,7 +232,7 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         // since this code only runs in Pokémon Showdown compatibility mode we
         // can avoid handling that (and save a branch) as it doesn't implement
         // the softlock
-        const choose = (p: PRNG, choices: engine.Choice[]) => choices[p.next(choices.length)];
+        const choose = (p: PRNG, choices: engine.Choice[]) => choices[p.random(choices.length)];
         const p1 = new PRNG(newSeed(prng));
         const p2 = new PRNG(newSeed(prng));
 
@@ -252,7 +252,7 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         }
       }
 
-      return Promise.resolve([duration, turns, serialize(prng.seed)] as const);
+      return Promise.resolve([duration, turns, serialize(prng.getSeed() as PRNGSeed)] as const);
     },
   },
   'libpkmn': {
@@ -266,7 +266,8 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
 const libpkmn = (format: ID, prng: PRNG, battles: number, showdown = true) => {
   const warmup = Math.min(1000, Math.max(Math.floor(battles / 10), 1));
   const exe = path.resolve(ROOT, 'build', 'bin', `benchmark${showdown ? '-showdown' : ''}`);
-  const stdout = sh(exe, [format[3], `${warmup}/${battles}`, serialize(prng.seed)]);
+  const stdout =
+    sh(exe, [format[3], `${warmup}/${battles}`, serialize(prng.getSeed() as PRNGSeed)]);
   const [duration, turn, seed] = stdout.split(',');
   return [BigInt(duration), Number(turn), seed.trim()] as const;
 };
@@ -406,7 +407,7 @@ if (require.main === module) {
         summary(data);
       } else if (previous) {
         const prng = new PRNG(seed);
-        regression(previous, data, (min, max) => prng.next(min, max));
+        regression(previous, data, (min, max) => prng.random(min, max));
       } else {
         for (const [name, samples] of Object.entries(data)) {
           console.log(`${name}\t${samples.join(',')}`);

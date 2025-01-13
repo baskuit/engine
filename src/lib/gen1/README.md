@@ -560,10 +560,8 @@ Smogon](https://www.smogon.com/forums/posts/5933177/show):
 - Pokémon Showdown doesn't implement type effectiveness precedence correctly.
 - Pokémon Showdown checks for type and OHKO immunity before accuracy.
 - Confusion self-hits use the wrong damage formula resulting in off-by-one errors (and also fail to
-  account for an opponent's Reflect). Furthermore, the confusion self-hit damage erroneously gets
-  inflicted on the confused user's substitute if the confused user had been attempting to use a
-  self-targeting move. Finally, Pokémon Showdown erroneously considers the *uncapped* self-hit
-  damage for the purposes of tracking the battle's last damage.
+  account for an opponent's Reflect). Furthermore, Pokémon Showdown erroneously considers the
+  *uncapped* self-hit damage for the purposes of tracking the battle's last damage.
 
 Beyond these general bugs, several move effects are implemented incorrectly by Pokémon Showdown.
 Some of these moves are [too fundamentally broken to be implemented](#unimplementable) by the pkmn
@@ -615,19 +613,16 @@ engine, but the following moves have their broken behavior preserved in `-Dshowd
   the RNG). More importantly, these moves should *not* cause the tracked last battle damage to be
   zeroed, but on Pokémon Showdown they do. These should also `|-fail|...|[still]` instead of doing
   nothing.
-- **Substitute**: in addition to the [Substitute + Confusion
-  glitch](https://pkmn.cc/bulba-glitch-1#Substitute_.2B_Confusion_glitch) not being implemented
-  correctly (covered earlier), the [Substitute 1/4
-  glitch](https://glitchcity.wiki/Substitute_%C2%BC_HP_glitch) also fails in many cases due to
-  Pokémon Showdown implementing the health check based on floating point division instead of integer
-  division like on the cartridge (meaning the Substitute 1/4 glitch only occurs if the Pokémon's
-  maximum HP is evenly divisible by 4). Substitute also incorrectly blocks Dream Eater on
-  Pokémon Showdown and incorrectly still heals 1 HP for any draining moves if the attack does 0
-  damage. Finally, Pokémon Showdown uses a `subFainted` field to track whether a Substitute was
-  broken to know when to nullify a move's effect, only it doesn't get cleared at the end of
-  the turn and can result in incorrect behavior on subsequent turns with the moves Mirror Move and
-  Metronome that invoke `runMove` (which is where `subFainted` gets cleared) on the user but skips
-  calling it for the eventual true target.
+- **Substitute**: the [Substitute 1/4 glitch](https://glitchcity.wiki/Substitute_%C2%BC_HP_glitch)
+  fails in many cases due to Pokémon Showdown implementing the health check based on floating point
+  division instead of integer division like on the cartridge (meaning the Substitute 1/4 glitch only
+  occurs if the Pokémon's maximum HP is evenly divisible by 4). Substitute also incorrectly blocks
+  Dream Eater on Pokémon Showdown and incorrectly still heals 1 HP for any draining moves if the
+  attack does 0 damage. Finally, Pokémon Showdown uses a `subFainted` field to track whether a
+  Substitute was broken to know when to nullify a move's effect, only it doesn't get cleared at the
+  end of the turn and can result in incorrect behavior on subsequent turns with the moves Mirror
+  Move and Metronome that invoke `runMove` (which is where `subFainted` gets cleared) on the user
+  but skips calling it for the eventual true target.
 
 In addition to numerous cases where Pokémon Showdown uses the wrong type of message (e.g. `|-fail`
 vs. `|-miss|` vs. `|-immune|`, e.g. in the case of Leech Seed) which aren't documented here, Pokémon

@@ -3,8 +3,10 @@ import * as path from 'path';
 import {Generation, PokemonSet} from '@pkmn/data';
 import {
   ActionChoice, Battle, BattleQueue, Effect, Field, ID, PRNG,
-  PRNGSeed, Pokemon, Side, SideID, extractChannelMessages,
+  Pokemon, Side, SideID, extractChannelMessages,
 } from '@pkmn/sim';
+
+export type PRNGSeed = [number, number, number, number];
 
 export interface Roll {
   key: string;
@@ -39,7 +41,7 @@ export const ROLLS = {
     return (move: string, skip: string[] = []) => {
       const moves = all.filter(m => !skip.includes(m));
       const value = ranged(moves.indexOf(move) + 1, moves.length) - 1;
-      return {key: 'data/moves.ts:12200:23', value};
+      return {key: 'data/mods/gen4/moves.ts:1064:23', value};
     };
   },
 };
@@ -216,13 +218,14 @@ export const patch = {
       };
     }
     if (debug) {
-      const next = battle.prng.next.bind(battle.prng);
-      battle.prng.next = (from?: number, to?: number) => {
-        const seed = battle.prng.seed.join(',');
+      const next = battle.prng.random.bind(battle.prng);
+      battle.prng.random = (from?: number, to?: number) => {
+        const orig = battle.prng.getSeed().join();
         const result = next(from, to);
-        const roll = (battle.prng.seed[0] << 16 >>> 0) + battle.prng.seed[1];
+        const seed = battle.prng.getSeed() as PRNGSeed;
+        const roll = (seed[0] << 16 >>> 0) + seed[1];
         const original = `0x${(roll).toString(16).padStart(8, '0').toUpperCase()}`;
-        battle.add('debug', location(), seed, original);
+        battle.add('debug', location(), orig, original);
         return result;
       };
     } else {
@@ -393,7 +396,7 @@ export class FixedRNG extends PRNG {
     this.index = 0;
   }
 
-  override next(from?: number, to?: number): number {
+  override random(from?: number, to?: number): number {
     if (this.index >= this.rolls.length) throw new Error('Insufficient number of rolls provided');
     const roll = this.rolls[this.index++];
     const n = this.index;
@@ -414,15 +417,7 @@ export class FixedRNG extends PRNG {
     return result;
   }
 
-  override get startingSeed(): PRNGSeed {
-    throw new Error('Unsupported operation');
-  }
-
   override clone(): PRNG {
-    throw new Error('Unsupported operation');
-  }
-
-  override nextFrame(): PRNGSeed {
     throw new Error('Unsupported operation');
   }
 
@@ -452,9 +447,9 @@ function filter(raw: string[]) {
 const METHOD = /^ {4}at ((?:\w|\.)+) \((.*\d)\)/;
 const NON_TERMINAL = new Set([
   'location', 'PRNG.randomChance', 'PRNG.sample',
-  'FixedRNG.next', 'FixedRNG.randomChance', 'FixedRNG.sample', 'FixedRNG.shuffle',
+  'FixedRNG.random', 'FixedRNG.randomChance', 'FixedRNG.sample', 'FixedRNG.shuffle',
   'Battle.random', 'Battle.randomChance', 'Battle.sample', 'Battle.speedSort', 'Battle.runEvent',
-  'PRNG.battle.prng.next', 'PRNG.battle.prng.shuffle',
+  'PRNG.battle.prng.random', 'PRNG.battle.prng.shuffle',
 ]);
 
 function location() {

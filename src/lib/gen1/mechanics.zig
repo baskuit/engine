@@ -618,17 +618,10 @@ fn beforeMove(
                         return .err;
                     }
                 }
-                // Pokémon Showdown incorrectly changes the "target" of the confusion self-hit based
-                // on the targeting behavior of the confused Pokémon's selected move which results
-                // in the wrong behavior with respect to the Substitute + Confusion glitch
-                const target = if (showdown and Move.get(side.last_selected_move).target == .Self)
-                    player
-                else
-                    player.foe();
 
                 const uncapped = battle.last_damage;
                 // Skipping adjustDamage / randomizeDamage / checkHit
-                _ = try applyDamage(battle, player, target, .Confusion, options);
+                _ = try applyDamage(battle, player, player.foe(), .Confusion, options);
                 // Pokémon Showdown thinks that confusion damage is uncapped ¯\_(ツ)_/¯
                 if (showdown) battle.last_damage = uncapped;
 
