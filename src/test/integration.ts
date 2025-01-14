@@ -895,7 +895,12 @@ if (require.main === module) {
     const duration =
       unit ? +argv.duration.slice(0, -1) * {s: 1e3, m: 6e4, h: 3.6e6}[unit]! : argv.duration;
     argv.cycles = argv.cycles ?? (duration ? 1 : 10);
-    const prng = new PRNG(argv.seed ? argv.seed.split(',').map((s: string) => Number(s)) : null);
+    const prng = new PRNG(argv.seed ? argv.seed.split(',').map((s: string) => Number(s)) : [
+      Math.floor(Math.random() * 0x10000),
+      Math.floor(Math.random() * 0x10000),
+      Math.floor(Math.random() * 0x10000),
+      Math.floor(Math.random() * 0x10000),
+    ] as PRNGSeed);
     if (!argv.seed) console.error('Seed:', prng.getSeed().join(','));
     const options = {prng, log: process.stdout.isTTY, ...argv, duration};
 
