@@ -252,8 +252,8 @@ pub fn transitions(
         for (Rolls.disable(f.p2, d.p2, p2_slp)) |p2_dis| { a.p2.disable = p2_dis;
         for (Rolls.attacking(f.p1, d.p1, p1_slp)) |p1_atk| { a.p1.attacking = p1_atk;
         for (Rolls.attacking(f.p2, d.p2, p2_slp)) |p2_atk| { a.p2.attacking = p2_atk;
-        for (Rolls.confusion(f.p1, d.p1, p1_atk, p1_slp)) |p1_cfz| { a.p1.confusion = p1_cfz;
-        for (Rolls.confusion(f.p2, d.p2, p2_atk, p2_slp)) |p2_cfz| { a.p2.confusion = p2_cfz;
+        for (Rolls.confusion(f.p1, d.p1, tie, p1_atk, p1_slp)) |p1_cfz| { a.p1.confusion = p1_cfz;
+        for (Rolls.confusion(f.p2, d.p2, tie, p2_atk, p2_slp)) |p2_cfz| { a.p2.confusion = p2_cfz;
         for (Rolls.confused(f.p1, p1_cfz)) |p1_cfzd| { a.p1.confused = p1_cfzd;
         for (Rolls.confused(f.p2, p2_cfz)) |p2_cfzd| { a.p2.confused = p2_cfzd;
         for (Rolls.paralyzed(f.p1, p1_cfzd)) |p1_par| { a.p1.paralyzed = p1_par;
@@ -672,11 +672,13 @@ pub const Rolls = struct {
     const CFZ_CONTINUING = [_]Optional(Confusion){.continuing};
     const CFZ_ENDED = [_]Optional(Confusion){.ended};
     const CFZ = [_]Optional(Confusion){ .continuing, .ended };
+    const CFZ_TIE = [_]Optional(Confusion){ .started, .continuing, .ended };
 
     /// FIXME
     pub fn confusion(
         action: Action,
         duration: Duration,
+        tie: Optional(Player),
         sibling: Optional(Observation),
         parent: Optional(Observation),
     ) []const Optional(Confusion) {
@@ -690,6 +692,8 @@ pub const Rolls = struct {
                 &CFZ_ENDED
             else if ((parent == .continuing and parent == .ended) or duration.confusion < 2)
                 &CFZ_CONTINUING
+            else if (tie != .None)
+                &CFZ_TIE
             else
                 &CFZ,
         };
