@@ -231,6 +231,7 @@ pub fn transitions(
         const f = frontier.items[i];
         const saved = stats.saved;
 
+        var r: Rational(u128) = .{ .p = 0, .q = 1 };
         try debug(writer, f, .{
             .shape = true,
             .color = i,
@@ -343,6 +344,8 @@ pub fn transitions(
                     q.reduce();
                     try p.add(q);
                     p.reduce();
+                    try r.add(q);
+                    r.reduce();
 
                     stats.saved += 1;
 
@@ -388,8 +391,9 @@ pub fn transitions(
         if (!old and @TypeOf(writer) != @TypeOf(std.io.null_writer)) {
             p.reduce();
             try writer.print(
-                "  = {s} ({d:.2}%)\n\n",
-                .{p, 100 * @as(f128, @floatFromInt(p.p)) / @as(f128, @floatFromInt(p.q))},
+                "    {s} ({d:.2}%)\n  = ──────────\n    {s} ({d:.2}%)\n\n",
+                .{r, 100 * @as(f128, @floatFromInt(r.p)) / @as(f128, @floatFromInt(r.q)),
+                  p, 100 * @as(f128, @floatFromInt(p.p)) / @as(f128, @floatFromInt(p.q))},
             );
         }
 
