@@ -213,8 +213,8 @@ measures 3 different configurations:
 
     1. methods which add to the battle log are overridden to drop any messages immediately
     2. `sendUpdates` is overridden to not send any updates
-    3. `makeRequest` avoids serializing the request for each side  
-  
+    3. `makeRequest` avoids serializing the request for each side
+
   The `DirectBattle` is then used synchronously as opposed to via the async `BattleStream` which is
   about 10% faster and obviates needing to care about races. This configuration minimizes string
   processing overhead and unnecessary delays due to `async` calls and is as close to as fast as
