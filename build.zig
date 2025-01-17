@@ -61,7 +61,6 @@ pub fn build(b: *std.Build) !void {
     const pic = b.option(bool, "pic", "Force position independent code") orelse default;
     const emit_asm = b.option(bool, "emit-asm", "Output .s (assembly code)") orelse false;
     const emit_ll = b.option(bool, "emit-ll", "Output .ll (LLVM IR)") orelse false;
-    const omit = b.option(bool, "omit-frame-pointer", "Omit frame pointer)") orelse false;
 
     const cmd = b.findProgram(&.{"strip"}, &.{}) catch null;
 
@@ -150,7 +149,6 @@ pub fn build(b: *std.Build) !void {
             try std.io.getStdErr().writeAll("Must provide --node-import-library path on Windows\n");
             std.process.exit(1);
         }
-        lib.omit_frame_pointer = omit;
         lib.linker_allow_shlib_undefined = true;
         maybeStrip(b, lib, b.getInstallStep(), strip, cmd);
         if (force_pic and pic orelse false) lib.force_pic = pic;
@@ -165,7 +163,7 @@ pub fn build(b: *std.Build) !void {
         b.installArtifact(lib);
     } else if (wasm) {
         const path = "src/lib/wasm.zig";
-        try buildWasm(b, name, path, optimize, strip, omit, pic, wasm_stack_size, null, options);
+        try buildWasm(b, name, path, optimize, strip, pic, wasm_stack_size, null, options);
     } else if (demo) {
         const path = "src/tools/demo.zig";
         const n = if (showdown) "demo-showdown" else "demo";
@@ -175,7 +173,7 @@ pub fn build(b: *std.Build) !void {
             .chance = chance,
             .calc = calc,
         });
-        try buildWasm(b, n, path, optimize, strip, pic, omit, wasm_stack_size, mod, options);
+        try buildWasm(b, n, path, optimize, strip, pic, wasm_stack_size, mod, options);
     } else if (dynamic) {
         const path = if (has_path) .{ .path = "src/lib/c.zig" } else b.path("src/lib/c.zig");
         const lib = b.addSharedLibrary(if (force_pic) .{
@@ -195,7 +193,6 @@ pub fn build(b: *std.Build) !void {
         });
         (if (root_module) lib.root_module else lib).addOptions("build_options", options);
         lib.addIncludePath(if (has_path) .{ .path = "src/include" } else b.path("src/include"));
-        lib.omit_frame_pointer = omit;
         maybeStrip(b, lib, b.getInstallStep(), strip, cmd);
         if (force_pic and pic orelse false) lib.force_pic = pic;
         b.installArtifact(lib);
@@ -218,7 +215,6 @@ pub fn build(b: *std.Build) !void {
         (if (root_module) lib.root_module else lib).addOptions("build_options", options);
         lib.addIncludePath(if (has_path) .{ .path = "src/include" } else b.path("src/include"));
         lib.bundle_compiler_rt = true;
-        lib.omit_frame_pointer = omit;
         maybeStrip(b, lib, b.getInstallStep(), strip, cmd);
         if (force_pic and pic orelse false) lib.force_pic = pic;
         if (emit_asm) {
@@ -275,7 +271,6 @@ pub fn build(b: *std.Build) !void {
     const config: Config = .{
         .target = target,
         .optimize = optimize,
-        .omit = omit,
         .pic = pic,
         .strip = strip,
         .cmd = cmd,
@@ -303,12 +298,10 @@ pub fn build(b: *std.Build) !void {
     var benchmark_config = tools;
     benchmark_config.general.optimize = .ReleaseFast;
     benchmark_config.general.strip = true;
-    // benchmark_config.general.omit = true;
     const benchmark = try tool(b, "src/test/benchmark.zig", benchmark_config);
 
     var fuzz_config = tools;
     fuzz_config.general.strip = false;
-    fuzz_config.general.omit = false;
     fuzz_config.tool.name = "fuzz";
     const fuzz = try tool(b, "src/test/fuzz.zig", fuzz_config);
 
@@ -339,7 +332,6 @@ fn buildWasm(
     root_src_file: []const u8,
     optimize: std.builtin.OptimizeMode,
     strip: ?bool,
-    omit: ?bool,
     pic: ?bool,
     wasm_stack_size: u64,
     import: ?*std.Build.Module,
@@ -420,7 +412,6 @@ fn buildWasm(
             bin.addModule("pkmn", i);
         }
     }
-    bin.omit_frame_pointer = omit;
     bin.stack_size = wasm_stack_size;
     if (@hasDecl(@TypeOf(bin.*), "strip")) bin.strip = strip orelse false;
     if (force_pic and pic orelse false) bin.force_pic = pic;
@@ -472,7 +463,6 @@ const Config = struct {
     optimize: std.builtin.OptimizeMode,
     pic: ?bool,
     strip: ?bool,
-    omit: ?bool,
     cmd: ?[]const u8,
 };
 
@@ -560,7 +550,6 @@ fn tool(b: *std.Build, path: []const u8, config: ToolConfig) !?*Step.Run {
         exe.addModule("pkmn", module(b, config.options));
     }
 
-    exe.omit_frame_pointer = config.general.omit;
     if (force_pic) {
         exe.single_threaded = true;
         if (config.general.pic orelse false) exe.force_pic = config.general.pic;
