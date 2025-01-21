@@ -4,6 +4,7 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
 const Pointer = if (@hasField(std.builtin.Type, "pointer")) .pointer else .Pointer;
+const One = if (@hasField(std.builtin.Type.Pointer.Size, "one")) .one else .One;
 
 pub fn PointerType(comptime P: type, comptime C: type) type {
     return if (@field(@typeInfo(P), @tagName(Pointer)).is_const) *const C else *C;
@@ -35,7 +36,7 @@ pub fn bytesAsValue(comptime T: type, bytes: anytype) BytesAsValueReturnType(T, 
 }
 
 fn BytesAsValueReturnType(comptime T: type, comptime B: type) type {
-    return CopyPtrAttrs(B, .One, T);
+    return CopyPtrAttrs(B, One, T);
 }
 
 fn CopyPtrAttrs(
@@ -44,7 +45,7 @@ fn CopyPtrAttrs(
     comptime child: type,
 ) type {
     const info = @field(@typeInfo(source), @tagName(Pointer));
-    const args: std.builtin.Type.Pointer = .{
+    const args: std.builtin.Type.Pointer = if (@hasField(std.builtin.Type.Pointer, "sentinel")) .{
         .size = size,
         .is_const = info.is_const,
         .is_volatile = info.is_volatile,
@@ -53,6 +54,15 @@ fn CopyPtrAttrs(
         .address_space = info.address_space,
         .child = child,
         .sentinel = null,
+    } else .{
+        .size = size,
+        .is_const = info.is_const,
+        .is_volatile = info.is_volatile,
+        .is_allowzero = info.is_allowzero,
+        .alignment = info.alignment,
+        .address_space = info.address_space,
+        .child = child,
+        .sentinel_ptr = null,
     };
     return @Type(if (@hasField(std.builtin.Type, "pointer"))
         .{ .pointer = args }
