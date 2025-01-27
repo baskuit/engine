@@ -362,8 +362,15 @@ pub const BigRational = struct {
     }
 
     /// Adds two rationals.
-    pub fn add(r: *BigRational, s: *const BigRational) !void {
-        try r.val.add(r.val, s.val);
+    pub fn add(r: *BigRational, s: anytype) !void {
+        if (@hasField(@TypeOf(s.*), "val")) {
+            try r.val.add(r.val, s.val);
+        } else {
+            var t = try std.math.big.Rational.init(r.val.p.allocator);
+            defer t.deinit();
+            try t.setRatio(s.p, s.q);
+            try r.val.add(r.val, t);
+        }
     }
 
     /// Multiplies two rationals.
