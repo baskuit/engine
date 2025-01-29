@@ -26,7 +26,7 @@ for (const gen of gens) {
           const showdown = file.includes('showdown');
           expect(await fuzz.run(gens, path.join(dir, file), showdown, true)).toBe(true);
         }
-      }, 120_000);
+      });
     }
   });
 }

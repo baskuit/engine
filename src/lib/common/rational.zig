@@ -19,7 +19,23 @@ const ComptimeFloat =
 /// sometimes overflows in places where an eager reduced implementation would not - to achieve
 /// the same behavior as an eager implementation simply call `reduce` after each operation.
 pub fn Rational(comptime T: type) type {
-    return extern struct {
+    // With floats we can't rely on an overflow bit to let us know when to reduce, so we
+    // instead start reducing when we get sufficiently close to the limit of the mantissa
+    // (in our domain we expect updates to involve numbers < 2**10, so we should be safe
+    // not reducing before we are 2**10 away from "overflowing" the mantissa)
+    const o = if (@typeInfo(T) == Float)
+        std.math.pow(T, 2, std.math.floatMantissaBits(T) - 10)
+    else
+        0;
+
+    const Err = switch (@typeInfo(T)) {
+        Int => error{Overflow},
+        Float => error{},
+        else => unreachable,
+    };
+
+    // Zig doesn't allow integers > u128 in an extern struct...
+    return if (@sizeOf(T) <= 16) extern struct {
         const Self = @This();
 
         /// Numerator. Must always be >= 1. Not guaranteed to be reduced in all cases.
@@ -27,21 +43,8 @@ pub fn Rational(comptime T: type) type {
         /// Denominator. Must always be >= 1. Not guaranteed to be reduced in all cases.
         q: T = 1,
 
-        // With floats we can't rely on an overflow bit to let us know when to reduce, so we
-        // instead start reducing when we get sufficiently close to the limit of the mantissa
-        // (in our domain we expect updates to involve numbers < 2**10, so we should be safe
-        // not reducing before we are 2**10 away from "overflowing" the mantissa)
-        const REDUCE = if (@typeInfo(T) == Float)
-            std.math.pow(T, 2, std.math.floatMantissaBits(T) - 10)
-        else
-            0;
-
         /// Possible error returned by operations on the Rational.
-        pub const Error = switch (@typeInfo(T)) {
-            Int => error{Overflow},
-            Float => error{},
-            else => unreachable,
-        };
+        pub const Error = Err;
 
         /// Resets the rational back to 1.
         pub fn reset(r: *Self) void {
@@ -52,135 +55,22 @@ pub fn Rational(comptime T: type) type {
         /// Update the rational by multiplying its numerator by p and its denominator by q.
         /// Both p and q must be >= 1, and if computable at comptime must have no common factors.
         pub fn update(r: *Self, p: anytype, q: anytype) Error!void {
-            // std.debug.print("({d}/{d}) * ", .{ p, q }); // DEBUG
-            assert(p >= 1);
-            assert(q >= 1);
-
-            // If our parameters are not fully reduced they may prematurely
-            // cause overflow/loss of precision after the multiplication below
-            assert(switch (@typeInfo(@TypeOf(p, q))) {
-                ComptimeInt, ComptimeFloat => comptime gcd(p, q),
-                else => 1,
-            } == 1);
-
-            switch (@typeInfo(T)) {
-                Int => {
-                    // Greedily attempt to multiply and if it fails, reduce and try again
-                    r.multiplication(p, q) catch |err| switch (err) {
-                        error.Overflow => {
-                            r.reduce();
-                            try r.multiplication(p, q);
-                        },
-                        else => unreachable,
-                    };
-                },
-                Float => {
-                    // Reduce in situations where we're likely to start losing precision
-                    if (r.q > REDUCE or r.p > REDUCE) r.reduce();
-
-                    r.p *= switch (@typeInfo(@TypeOf(p))) {
-                        Float, ComptimeFloat => p,
-                        else => @floatFromInt(p),
-                    };
-                    r.q *= switch (@typeInfo(@TypeOf(q))) {
-                        Float, ComptimeFloat => q,
-                        else => @floatFromInt(q),
-                    };
-
-                    // We should always be dealing with whole numbers
-                    assert(std.math.modf(r.p).fpart == 0);
-                    assert(std.math.modf(r.q).fpart == 0);
-                },
-                else => unreachable,
-            }
+            return update_(T, o, r, p, q);
         }
 
         /// Add two rationals using the identity (a/b) + (c/d) = (ad+bc)/(bd).
-        pub fn add(r: *Self, s: *Self) Error!void {
-            switch (@typeInfo(T)) {
-                Int => {
-                    if (r.q == s.q) {
-                        r.p = std.math.add(T, r.p, s.p) catch |err| switch (err) {
-                            error.Overflow => val: {
-                                r.reduce();
-                                s.reduce();
-                                break :val try std.math.add(T, r.p, s.p);
-                            },
-                            else => unreachable,
-                        };
-                    } else {
-                        r.addition(s.p, s.q) catch |err| switch (err) {
-                            error.Overflow => {
-                                r.reduce();
-                                s.reduce();
-                                try r.addition(s.p, s.q);
-                            },
-                            else => unreachable,
-                        };
-                    }
-                },
-                Float => {
-                    if (r.q == s.q) {
-                        if (r.p > REDUCE) r.reduce();
-                        if (s.p > REDUCE) s.reduce();
-
-                        r.p += s.p;
-                    } else {
-                        // Always reduce to minimize loss of precision from the multiplications
-                        r.reduce();
-                        s.reduce();
-
-                        r.p = (r.p * s.q) + (r.q * s.p);
-                        r.q *= s.q;
-                    }
-
-                    assert(std.math.modf(r.p).fpart == 0);
-                    assert(std.math.modf(r.q).fpart == 0);
-                },
-                else => unreachable,
-            }
+        pub fn add(r: *Self, s: anytype) Error!void {
+            return add_(T, o, r, s);
         }
 
         /// Multiplies two rationals.
-        pub fn mul(r: *Self, s: *Self) Error!void {
-            switch (@typeInfo(T)) {
-                Int => {
-                    r.multiplication(s.p, s.q) catch |err| switch (err) {
-                        error.Overflow => {
-                            r.reduce();
-                            s.reduce();
-                            try r.multiplication(s.p, s.q);
-                        },
-                        else => unreachable,
-                    };
-                },
-                Float => {
-                    if (r.q > REDUCE or r.p > REDUCE) r.reduce();
-                    if (s.q > REDUCE or s.p > REDUCE) s.reduce();
-
-                    r.p *= s.p;
-                    r.q *= s.q;
-
-                    assert(std.math.modf(r.p).fpart == 0);
-                    assert(std.math.modf(r.q).fpart == 0);
-                },
-                else => unreachable,
-            }
+        pub fn mul(r: *Self, s: anytype) Error!void {
+            return mul_(T, o, r, s);
         }
 
         /// Normalize the rational by reducing by the greatest common divisor.
         pub fn reduce(r: *Self) void {
-            const d = gcd(r.p, r.q);
-            if (d == 1) return;
-
-            assert(@mod(r.p, d) == 0);
-            assert(@mod(r.q, d) == 0);
-
-            r.p /= d;
-            r.q /= d;
-
-            assert(r.p >= 1);
-            assert(r.q >= 1);
+            reduce_(r);
         }
 
         pub fn format(
@@ -192,22 +82,198 @@ pub fn Rational(comptime T: type) type {
             _ = .{ fmt, opts };
             try writer.print("{d}/{d}", .{ self.p, self.q });
         }
+    } else struct {
+        const Self = @This();
 
-        fn multiplication(r: *Self, p: anytype, q: anytype) !void {
-            r.p = try std.math.mul(T, r.p, p);
-            r.q = try std.math.mul(T, r.q, q);
+        /// Numerator. Must always be >= 1. Not guaranteed to be reduced in all cases.
+        p: T = 1,
+        /// Denominator. Must always be >= 1. Not guaranteed to be reduced in all cases.
+        q: T = 1,
+
+        /// Possible error returned by operations on the Rational.
+        pub const Error = Err;
+
+        /// Resets the rational back to 1.
+        pub fn reset(r: *Self) void {
+            r.p = 1;
+            r.q = 1;
         }
 
-        fn addition(r: *Self, p: anytype, q: anytype) !void {
-            // (a/b) + (c/d) = (ad+bc)/(bd)
-            const d = try std.math.mul(T, r.q, q);
-            const n1 = try std.math.mul(T, r.p, q);
-            const n2 = try std.math.mul(T, r.q, p);
+        /// Update the rational by multiplying its numerator by p and its denominator by q.
+        /// Both p and q must be >= 1, and if computable at comptime must have no common factors.
+        pub fn update(r: *Self, p: anytype, q: anytype) Error!void {
+            return update_(T, o, r, p, q);
+        }
 
-            r.p = try std.math.add(T, n1, n2);
-            r.q = d;
+        /// Add two rationals using the identity (a/b) + (c/d) = (ad+bc)/(bd).
+        pub fn add(r: *Self, s: anytype) Error!void {
+            return add_(T, o, r, s);
+        }
+
+        /// Multiplies two rationals.
+        pub fn mul(r: *Self, s: anytype) Error!void {
+            return mul_(T, o, r, s);
+        }
+
+        /// Normalize the rational by reducing by the greatest common divisor.
+        pub fn reduce(r: *Self) void {
+            reduce_(r);
+        }
+
+        pub fn format(
+            self: Self,
+            comptime fmt: []const u8,
+            opts: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            _ = .{ fmt, opts };
+            try writer.print("{d}/{d}", .{ self.p, self.q });
         }
     };
+}
+
+fn update_(comptime T: type, comptime o: comptime_int, r: anytype, p: anytype, q: anytype) !void {
+    // std.debug.print("({d}/{d}) * ", .{ p, q }); // DEBUG
+    assert(p >= 1);
+    assert(q >= 1);
+
+    // If our parameters are not fully reduced they may prematurely
+    // cause overflow/loss of precision after the multiplication below
+    assert(switch (@typeInfo(@TypeOf(p, q))) {
+        ComptimeInt, ComptimeFloat => comptime gcd(p, q),
+        else => 1,
+    } == 1);
+
+    switch (@typeInfo(T)) {
+        Int => {
+            // Greedily attempt to multiply and if it fails, reduce and try again
+            multiplication(T, r, p, q) catch |err| switch (err) {
+                error.Overflow => {
+                    r.reduce();
+                    try multiplication(T, r, p, q);
+                },
+                else => unreachable,
+            };
+        },
+        Float => {
+            // Reduce in situations where we're likely to start losing precision
+            if (r.q > o or r.p > o) r.reduce();
+
+            r.p *= switch (@typeInfo(@TypeOf(p))) {
+                Float, ComptimeFloat => p,
+                else => @floatFromInt(p),
+            };
+            r.q *= switch (@typeInfo(@TypeOf(q))) {
+                Float, ComptimeFloat => q,
+                else => @floatFromInt(q),
+            };
+
+            // We should always be dealing with whole numbers
+            assert(std.math.modf(r.p).fpart == 0);
+            assert(std.math.modf(r.q).fpart == 0);
+        },
+        else => unreachable,
+    }
+}
+
+fn add_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !void {
+    switch (@typeInfo(T)) {
+        Int => {
+            if (r.q == s.q) {
+                r.p = std.math.add(T, r.p, s.p) catch |err| switch (err) {
+                    error.Overflow => val: {
+                        r.reduce();
+                        s.reduce();
+                        break :val try std.math.add(T, r.p, s.p);
+                    },
+                    else => unreachable,
+                };
+            } else {
+                addition(T, r, s.p, s.q) catch |err| switch (err) {
+                    error.Overflow => {
+                        r.reduce();
+                        s.reduce();
+                        try addition(T, r, s.p, s.q);
+                    },
+                    else => unreachable,
+                };
+            }
+        },
+        Float => {
+            if (r.q == s.q) {
+                if (r.p > o) r.reduce();
+                if (s.p > o) s.reduce();
+
+                r.p += s.p;
+            } else {
+                // Always reduce to minimize loss of precision from the multiplications
+                r.reduce();
+                s.reduce();
+
+                r.p = (r.p * s.q) + (r.q * s.p);
+                r.q *= s.q;
+            }
+
+            assert(std.math.modf(r.p).fpart == 0);
+            assert(std.math.modf(r.q).fpart == 0);
+        },
+        else => unreachable,
+    }
+}
+
+fn mul_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !void {
+    switch (@typeInfo(T)) {
+        Int => {
+            multiplication(T, r, s.p, s.q) catch |err| switch (err) {
+                error.Overflow => {
+                    r.reduce();
+                    s.reduce();
+                    try multiplication(T, r, s.p, s.q);
+                },
+                else => unreachable,
+            };
+        },
+        Float => {
+            if (r.q > o or r.p > o) r.reduce();
+            if (s.q > o or s.p > o) s.reduce();
+
+            r.p *= s.p;
+            r.q *= s.q;
+
+            assert(std.math.modf(r.p).fpart == 0);
+            assert(std.math.modf(r.q).fpart == 0);
+        },
+        else => unreachable,
+    }
+}
+
+fn reduce_(r: anytype) void {
+    const d = gcd(r.p, r.q);
+    if (d == 1) return;
+
+    assert(@mod(r.p, d) == 0);
+    assert(@mod(r.q, d) == 0);
+
+    r.p /= d;
+    r.q /= d;
+
+    assert(r.p >= 1);
+    assert(r.q >= 1);
+}
+
+fn multiplication(comptime T: type, r: anytype, p: anytype, q: anytype) !void {
+    r.p = try std.math.mul(T, r.p, p);
+    r.q = try std.math.mul(T, r.q, q);
+}
+
+fn addition(comptime T: type, r: anytype, p: anytype, q: anytype) !void {
+    // (a/b) + (c/d) = (ad+bc)/(bd)
+    const d = try std.math.mul(T, r.q, q);
+    const n1 = try std.math.mul(T, r.p, q);
+    const n2 = try std.math.mul(T, r.q, p);
+
+    r.p = try std.math.add(T, n1, n2);
+    r.q = d;
 }
 
 fn gcd(p: anytype, q: anytype) @TypeOf(p, q) {
@@ -289,7 +355,7 @@ fn doTurn(r: anytype) !void {
 }
 
 test Rational {
-    inline for (.{ u64, u128, f64 }) |t| {
+    inline for (.{ u64, u128, u256, f64 }) |t| {
         var r: Rational(t) = .{};
 
         var c: t = 128;

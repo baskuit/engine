@@ -14,7 +14,6 @@ const util = @import("../common/util.zig");
 const Action = chance.Action;
 const Actions = chance.Actions;
 const assert = std.debug.assert;
-const BigRational = rational.BigRational;
 const Chance = chance.Chance;
 const Choice = common.Choice;
 const Confusion = chance.Confusion;
@@ -217,10 +216,7 @@ pub fn transitions(
     const p1 = b.side(.P1);
     const p2 = b.side(.P2);
 
-    var p = try BigRational.init(allocator);
-    defer p.deinit();
-    try p.val.p.set(0);
-    try p.val.q.set(1);
+    var p: Rational(u256) = .{ .p = 0, .q = 1 };
     try frontier.append(opts.chance.actions);
 
     // zig fmt: off
@@ -235,10 +231,7 @@ pub fn transitions(
         const f = frontier.items[i];
         const saved = stats.saved;
 
-        var r = try BigRational.init(allocator);
-        defer r.deinit();
-        try r.val.p.set(0);
-        try r.val.q.set(1);
+        var r: Rational(u256) = .{ .p = 0, .q = 1 };
 
         try debug(writer, f, .{
             .shape = true,
@@ -351,11 +344,13 @@ pub fn transitions(
 
                     q.reduce();
                     try p.add(q);
+                    p.reduce();
                     try r.add(q);
+                    r.reduce();
 
                     stats.saved += 1;
 
-                    if (p.val.q.order(p.val.p) == .lt) {
+                    if (p.q < p.p) {
                         err("improper fraction {}", .{p}, options.seed);
                         return error.TestUnexpectedResult;
                     }
@@ -393,13 +388,15 @@ pub fn transitions(
         }}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
         assert(stats.saved > saved);
-        const old = @hasDecl(std.fmt, "formatFloatDecimal");
-        if (!old and @TypeOf(writer) != @TypeOf(std.io.null_writer)) {
-            try writer.print(
-                "    {} ({d:.2}%)\n  = ──────────\n    {} ({d:.2}%)\n\n",
-                .{r.val, percent(r.val), p.val, percent(p.val)},
-            );
-        }
+        // TODO: ziglang/zig#22667
+        // const old = @hasDecl(std.fmt, "formatFloatDecimal");
+        // if (!old and @TypeOf(writer) != @TypeOf(std.io.null_writer)) {
+        //     try writer.print(
+        //         "    {} ({d:.2}%)\n  = ──────────\n    {} ({d:.2}%)\n\n",
+        //         .{r, 100 * @as(f128, @floatFromInt(r.p)) / @as(f128, @floatFromInt(r.q)),
+        //           p, 100 * @as(f128, @floatFromInt(p.p)) / @as(f128, @floatFromInt(p.q))},
+        //     );
+        // }
 
     }
 
@@ -412,17 +409,13 @@ pub fn transitions(
 
     stats.seen = seen.count();
 
-    if (try p.val.p.to(u128) != 1 or try p.val.q.to(u128) != 1) {
+    p.reduce();
+    if (p.p != 1 or p.q != 1) {
         err("expected 1, found {}", .{p}, options.seed);
         return error.TestExpectedEqual;
     }
 
     return stats;
-}
-
-fn percent(r: anytype) f128 {
-    return 100 * @as(f128, @floatFromInt(r.p.to(u128) catch unreachable)) /
-        @as(f128, @floatFromInt(r.q.to(u128) catch unreachable));
 }
 
 pub fn update(
