@@ -335,7 +335,13 @@ fn display(w: anytype, final: bool) !void {
     if (buf) |b| try w.writeAll(b.items);
 }
 
-pub const panic = Panic.call;
+pub const panic =
+    if (@hasDecl(std.debug, "FullPanic")) std.debug.FullPanic(panicFn) else Panic.call;
+fn panicFn(msg: []const u8, ra: ?usize) noreturn {
+    if (last) |seed| dump(seed) catch unreachable;
+    std.debug.defaultPanic(msg, ra);
+}
+
 pub const Panic = struct {
     pub fn call(msg: []const u8, ert: ?*std.builtin.StackTrace, ra: ?usize) noreturn {
         if (last) |seed| dump(seed) catch unreachable;
