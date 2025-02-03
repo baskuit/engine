@@ -17,7 +17,7 @@ import {decimal, regression, summarize} from './stats';
 const BLOCKLIST = ['mimic', 'metronome', 'mirrormove', 'transform'] as ID[];
 const ROOT = path.resolve(__dirname, '..', '..');
 
-const serialize = (seed: PRNGSeed) => toBigInt(seed).toString();
+const serialize = (seed: [number, number, number, number]) => toBigInt(seed).toString();
 const sh = (cmd: string, args: string[]) => execFileSync(cmd, args, {encoding: 'utf8'});
 
 export const Options = new class {
@@ -185,12 +185,12 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
 
       for (let i = 0; i < battles; i++) {
         const options = Options.get(gen, prng);
-        const config = {formatid: format as any, seed: options.seed as PRNGSeed};
+        const config = {formatid: format as any, seed: options.seed.join(',') as PRNGSeed};
         const battle = new DirectBattle(config);
         patch.battle(battle);
 
-        const p1 = new PRNG(newSeed(prng));
-        const p2 = new PRNG(newSeed(prng));
+        const p1 = PRNG.get(newSeed(prng).join(',') as PRNGSeed);
+        const p2 = PRNG.get(newSeed(prng).join(',') as PRNGSeed);
 
         // NOTE: We must clone the team as PS mutates it which will cause drift
         const team1 = Teams.unpack(Teams.pack(options.p1.team as PokemonSet[]));
@@ -213,7 +213,8 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         }
       }
 
-      return Promise.resolve([duration, turns, serialize(prng.getSeed() as PRNGSeed)] as const);
+      const seed = prng.getSeed().split(',').map(n => +n) as [number, number, number, number];
+      return Promise.resolve([duration, turns, serialize(seed)] as const);
     },
   },
   '@pkmn/engine': {
@@ -233,8 +234,8 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         // can avoid handling that (and save a branch) as it doesn't implement
         // the softlock
         const choose = (p: PRNG, choices: engine.Choice[]) => choices[p.random(choices.length)];
-        const p1 = new PRNG(newSeed(prng));
-        const p2 = new PRNG(newSeed(prng));
+        const p1 = PRNG.get(newSeed(prng).join(',') as PRNGSeed);
+        const p2 = PRNG.get(newSeed(prng).join(',') as PRNGSeed);
 
         let c1 = engine.Choice.pass;
         let c2 = engine.Choice.pass;
@@ -252,7 +253,8 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
         }
       }
 
-      return Promise.resolve([duration, turns, serialize(prng.getSeed() as PRNGSeed)] as const);
+      const seed = prng.getSeed().split(',').map(n => +n) as [number, number, number, number];
+      return Promise.resolve([duration, turns, serialize(seed)] as const);
     },
   },
   'libpkmn': {
@@ -266,8 +268,8 @@ const CONFIGURATIONS: {[name: string]: Configuration} = {
 const libpkmn = (format: ID, prng: PRNG, battles: number, showdown = true) => {
   const warmup = Math.min(1000, Math.max(Math.floor(battles / 10), 1));
   const exe = path.resolve(ROOT, 'build', 'bin', `benchmark${showdown ? '-showdown' : ''}`);
-  const stdout =
-    sh(exe, [format[3], `${warmup}/${battles}`, serialize(prng.getSeed() as PRNGSeed)]);
+  const orig = prng.getSeed().split(',').map(n => +n) as [number, number, number, number];
+  const stdout = sh(exe, [format[3], `${warmup}/${battles}`, serialize(orig)]);
   const [duration, turn, seed] = stdout.split(',');
   return [BigInt(duration), Number(turn), seed.trim()] as const;
 };
@@ -306,7 +308,7 @@ export const iterations = (gens: Generations, num: number, battles: number, seed
       const control = {turns: 0, seed: ''};
       const samples = new Array(num);
       for (let i = 0; i < num; i++) {
-        const prng = new PRNG(seed.slice() as PRNGSeed);
+        const prng = PRNG.get(seed.join(',') as PRNGSeed);
         const [duration, turns, final] = libpkmn(format, prng, battles, showdown);
         samples[i] = Math.round(1e9 / (Number(duration) / battles));
         compare(name, control, turns, final);
@@ -348,14 +350,14 @@ export const comparison = async (gens: Generations, battles: number, seed: numbe
 
       if (code.warmup) {
         // Must use a different PRNG than the one used for the actual test
-        const prng = new PRNG(seed.slice() as PRNGSeed);
+        const prng = PRNG.get(seed.join(',') as PRNGSeed);
         // We ignore the result - only the data from the actual test matters
         await code.run(gen, format, prng, warmup);
         // @ts-ignore
         if (global.gc) global.gc();
       }
 
-      const prng = new PRNG(seed.slice() as PRNGSeed);
+      const prng = PRNG.get(seed.join(',') as PRNGSeed);
       const [duration, turns, final] = await code.run(gen, format, prng, battles);
       compare(config, control, turns, final);
       results[name][config] = duration;

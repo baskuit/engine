@@ -40,7 +40,7 @@ In order to reconcile this, the pkmn engine instead aims to match a *patched* ve
 Showdown, where minimal changes have been made to Pokémon Showdown to improve correctness and
 eliminate unnecessary nondeterministic elements:
 
-- `Battle#eachEvent` and `Battle#residualEvent` have been changed to not perform a
+- `Battle#eachEvent` and `Battle#fieldEvent` have been changed to not perform a
   `Battle#speedSort` in Generation I and II, which should result in events being executed in the
   order they're added, ultimately resulting in Player 1's events occurring before Player 2's
   regardless of speed, effectively recreating the cartridge's default "host" ordering semantics

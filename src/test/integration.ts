@@ -35,7 +35,7 @@ interface Frame {
     result: engine.Result;
     c1: engine.Choice;
     c2: engine.Choice;
-    seed: number[];
+    seed: PRNGSeed;
     chunk: string;
   };
 }
@@ -56,8 +56,7 @@ class Runner {
     this.gen = gen;
     this.format = options.format;
 
-    this.prng = (options.prng && !Array.isArray(options.prng))
-      ? options.prng : new PRNG(options.prng);
+    this.prng = PRNG.get(options.prng);
 
     const moves = new Set<ID>();
     this.p1options = fixTeam(gen, options.p1options!, moves);
@@ -73,13 +72,15 @@ class Runner {
     // try again! (note that validate marks used to ensure progress)
     if (this.skip) return Promise.resolve();
 
-    const seed = this.prng.getSeed().slice() as PRNGSeed;
+    const seed = this.prng.getSeed() as PRNGSeed;
     const create = (o: sim.AIOptions) => (s: Streams.ObjectReadWriteStream<string>) =>
-      o.createAI(s, {seed: newSeed(this.prng), move: 0.7, mega: 0.6, ...o});
+      o.createAI(s, {seed: newSeed(this.prng).join(',') as PRNGSeed, move: 0.7, mega: 0.6, ...o});
 
     return Promise.resolve(play(
-      this.gen,
-      {formatid: this.format, seed},
+      this.gen, {
+        formatid: this.format,
+        seed: seed.split(',').map(n => +n) as [number, number, number, number],
+      },
       {spec: {name: 'Player 1', ...this.p1options}, create: create(this.p1options)},
       {spec: {name: 'Player 2', ...this.p2options}, create: create(this.p2options)},
       undefined,
@@ -135,7 +136,7 @@ interface PlayerOptions {
 // to the logs/ directory for ease of debugging
 function play(
   gen: Generation,
-  {seed, formatid}: {formatid: string; seed: PRNGSeed},
+  {seed, formatid}: {formatid: string; seed: [number, number, number, number]},
   p1options: PlayerOptions,
   p2options: PlayerOptions,
   replay?: string[],
@@ -151,7 +152,8 @@ function play(
 
   // We can't pass p1/p2 via BattleOptions because that would cause the battle to
   // start before we could patch it, desyncing the PRNG due to spurious advances
-  const control = new Battle({formatid: formatid as ID, seed, strictChoices: false, debug});
+  const control = new Battle({
+    formatid: formatid as ID, seed: seed.join(',') as PRNGSeed, strictChoices: false, debug});
   patch.battle(control, true, debug);
 
   const players = replay ? undefined : {
@@ -238,7 +240,7 @@ function play(
       }
 
       const request = partial.showdown.result = toResult(control, p1options.spec.name);
-      partial.showdown.seed = control.prng.getSeed().slice() as PRNGSeed;
+      partial.showdown.seed = control.prng.getSeed() as PRNGSeed;
 
       const chunk = control.getDebugLog();
       partial.showdown.chunk = chunk;
@@ -253,7 +255,7 @@ function play(
 
       compare(chunk, parsed);
       assert.deepEqual(result, request);
-      assert.deepEqual(battle.prng, control.prng.getSeed());
+      assert.deepEqual(battle.prng.join(','), control.prng.getSeed());
 
       if (replay && index >= replay.length) break;
       [c1, c2] = getChoices();
@@ -272,7 +274,7 @@ function play(
     } while (!control.ended);
 
     if (control.ended) assert.notEqual(result.type, undefined);
-    assert.deepEqual(battle.prng, control.prng.getSeed());
+    assert.deepEqual(battle.prng.join(','), control.prng.getSeed());
   } catch (err: any) {
     if (!replay) {
       const num = toBigInt(seed);
@@ -452,7 +454,7 @@ function displayShowdownFrame(partial: Partial<Frame['showdown']>) {
     buf.push('</pre></div>');
   }
   if ('seed' in partial && partial.seed) {
-    buf.push(`<div class="seed">${partial.seed.join(', ')}</div>`);
+    buf.push(`<div class="seed">${partial.seed.replaceAll(',', ', ')}</div>`);
   }
   if (partial.result) {
     const {result, c1, c2} = partial;
@@ -796,7 +798,8 @@ export async function run(gens: Generations, options: string | Flags, errors?: E
     patch.generation(gen);
 
     const lines = log.split('\n');
-    const spec = JSON.parse(lines[0].slice(7)) as {formatid: string; seed: PRNGSeed};
+    const spec = JSON.parse(lines[0].slice(7)) as
+      {formatid: string; seed: [number, number, number, number]};
     const p1 = {spec: JSON.parse(lines[1].slice(10)) as {name: string; team: string}};
     const p2 = {spec: JSON.parse(lines[2].slice(10)) as {name: string; team: string}};
     play(gen, spec, p1, p2, lines, true);
@@ -830,11 +833,11 @@ export async function run(gens: Generations, options: string | Flags, errors?: E
   return failures;
 }
 
-export function newSeed(prng: PRNG): PRNGSeed {
+export function newSeed(prng: PRNG): [number, number, number, number] {
   return [prng.random(0x10000), prng.random(0x10000), prng.random(0x10000), prng.random(0x10000)];
 }
 
-export function toBigInt(seed: PRNGSeed): bigint {
+export function toBigInt(seed: [number, number, number, number]): bigint {
   return ((BigInt(seed[0]) << 48n) | (BigInt(seed[1]) << 32n) |
    (BigInt(seed[2]) << 16n) | BigInt(seed[3]));
 }
@@ -895,19 +898,19 @@ if (require.main === module) {
     const duration =
       unit ? +argv.duration.slice(0, -1) * {s: 1e3, m: 6e4, h: 3.6e6}[unit]! : argv.duration;
     argv.cycles = argv.cycles ?? (duration ? 1 : 10);
-    const prng = new PRNG(argv.seed ? argv.seed.split(',').map((s: string) => Number(s)) : [
+    const prng = PRNG.get(argv.seed ?? [
       Math.floor(Math.random() * 0x10000),
       Math.floor(Math.random() * 0x10000),
       Math.floor(Math.random() * 0x10000),
       Math.floor(Math.random() * 0x10000),
-    ] as PRNGSeed);
-    if (!argv.seed) console.error('Seed:', prng.getSeed().join(','));
+    ].join(','));
+    if (!argv.seed) console.error('Seed:', prng.getSeed());
     const options = {prng, log: process.stdout.isTTY, ...argv, duration};
 
     const errors = argv.summary ? new Errors() : undefined;
     const code = await run(gens, options, errors);
     if (code && errors) {
-      const file = path.join(ROOT, 'logs', `${prng.getSeed().join('-')}.html`);
+      const file = path.join(ROOT, 'logs', `${prng.getSeed().replaceAll(',', '-')}.html`);
       const link = path.join(ROOT, 'logs', 'summary.html');
       fs.writeFileSync(file, errors.toString());
       symlink(file, link);

@@ -17,7 +17,7 @@ const {HIT, MISS, CRIT, NO_CRIT, MIN_DMG, MAX_DMG, TIE, DRAG} = ROLLS.basic({
   dmg: 'data/mods/gen2/scripts.ts:711:27',
 });
 
-const QKC = {key: 'sim/battle.ts:1625:49', value: MAX};
+const QKC = {key: 'sim/battle.ts:1732:49', value: MAX};
 const QKCs = (n: number) => Array(n).fill(QKC);
 const SECONDARY = (value: number) => ({key: 'data/mods/gen2/scripts.ts:464:66', value});
 const PROC_SEC = SECONDARY(MIN);
@@ -775,7 +775,7 @@ describe('Gen 2', () => {
   });
 
   test('choices', () => {
-    const random = new PRNG([1, 2, 3, 4]);
+    const random = PRNG.get('1,2,3,4');
     const battle = new Battle({
       formatid: formatFor(gen), ...Options.get(gen, random) as any,
     });
@@ -8123,7 +8123,7 @@ describe('Gen 2', () => {
   });
 
   test('Present effect', () => {
-    const present = {key: 'data/moves.ts:14405:22', value: ranged(1, 10) - 1};
+    const present = {key: 'data/moves.ts:14411:22', value: ranged(1, 10) - 1};
     const present40 = {...present, value: ranged(6, 10) - 1};
     const present120 = {...present, value: ranged(10, 10) - 1};
     const battle = startBattle([
@@ -8330,7 +8330,7 @@ describe('Gen 2', () => {
   });
 
   test('Magnitude effect', () => {
-    const mag8 = {key: 'data/moves.ts:11273:19', value: ranged(85, 100) - 1};
+    const mag8 = {key: 'data/moves.ts:11279:19', value: ranged(85, 100) - 1};
     const mag5 = {...mag8, value: ranged(15, 100) - 1};
     const battle = startBattle([
       QKC, mag8, NO_CRIT, MIN_DMG, QKC, mag5, NO_CRIT, MIN_DMG, NO_CRIT, MIN_DMG, QKC,
@@ -9027,7 +9027,7 @@ describe('Gen 2', () => {
   });
 
   test('FutureSight effect', () => {
-    const hit = {key: 'data/mods/gen4/scripts.ts:149:43', value: 0xE6666667 - 1};
+    const hit = {key: 'data/mods/gen4/scripts.ts:175:43', value: 0xE6666667 - 1};
     const miss = {...hit, value: hit.value + 1};
     const band = {key: 'data/mods/gen2/items.ts:60:13', value: ranged(30, 256) - 1};
     const battle = startBattle([

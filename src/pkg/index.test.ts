@@ -19,7 +19,7 @@ for (const gen of new Generations(Dex as any)) {
 
   describe(`Gen ${gen.num}`, () => {
     test('Battle.create/restore', () => {
-      const options = Options.get(gen, new PRNG([1, 2, 3, 4]));
+      const options = Options.get(gen, PRNG.get('1,2,3,4'));
       const battle = Battle.create(gen, options);
       const restored = Battle.restore(gen, battle, options);
       expect(restored.toJSON()).toEqual(battle.toJSON());

@@ -6,7 +6,7 @@ import {
   Pokemon, Side, SideID, extractChannelMessages,
 } from '@pkmn/sim';
 
-export type PRNGSeed = [number, number, number, number];
+export type PRNGSeed = `${number},${number},${number},${number}`;
 
 export interface Roll {
   key: string;
@@ -17,7 +17,7 @@ export const MIN = 0;
 export const MAX = 0xFFFFFFFF;
 export const NOP = 42;
 
-const tie = 'sim/battle-queue.ts:419:15';
+const tie = 'sim/battle-queue.ts:417:15';
 
 export const ROLLS = {
   basic(keys: {hit: string; crit: string; dmg: string}) {
@@ -30,7 +30,7 @@ export const ROLLS = {
       MAX_DMG: {key: keys.dmg, value: MAX},
       TIE: (n: 1 | 2) => ({key: tie, value: ranged(n, 2) - 1}),
       DRAG: (m: number, n = 5) =>
-        ({key: 'sim/battle.ts:1407:36', value: ranged(m - 1, n)}),
+        ({key: 'sim/battle.ts:1514:36', value: ranged(m - 1, n)}),
     };
   },
   metronome(gen: Generation, exclude: string[]) {
@@ -99,27 +99,28 @@ function eachEvent(this: Battle, eventid: string, effect?: Effect | null, relayV
   }
 }
 
-function residualEvent(this: Battle, eventid: string, relayVar?: any) {
+function fieldEvent(this: Battle, eventid: string, targets?: Pokemon[]) {
   const callbackName = `on${eventid}`;
-  let handlers = this.findBattleEventHandlers(callbackName, 'duration');
-  handlers = handlers.concat(
-    this.findFieldEventHandlers(this.field, `onField${eventid}`, 'duration')
-  );
+  let getKey: undefined | 'duration';
+  if (eventid === 'Residual') {
+    getKey = 'duration';
+  }
+  let handlers = this.findFieldEventHandlers(this.field, `onField${eventid}`, getKey);
   for (const side of this.sides) {
     if (side.n < 2 || !side.allySide) {
-      handlers = handlers.concat(this.findSideEventHandlers(side, `onSide${eventid}`, 'duration'));
+      handlers = handlers.concat(this.findSideEventHandlers(side, `onSide${eventid}`, getKey));
     }
     for (const active of side.active) {
       if (!active) continue;
-      handlers = handlers.concat(
-        this.findPokemonEventHandlers(active, callbackName, 'duration')
-      );
-      handlers = handlers.concat(
-        this.findSideEventHandlers(side, callbackName, undefined, active)
-      );
-      handlers = handlers.concat(
-        this.findFieldEventHandlers(this.field, callbackName, undefined, active)
-      );
+      if (eventid === 'SwitchIn') {
+        handlers = handlers.concat(this.findPokemonEventHandlers(active, `onAny${eventid}`));
+      }
+      if (targets && !targets.includes(active)) continue;
+      handlers = handlers.concat(this.findPokemonEventHandlers(active, callbackName, getKey));
+      handlers = handlers.concat(this.findSideEventHandlers(side, callbackName, undefined, active));
+      handlers =
+        handlers.concat(this.findFieldEventHandlers(this.field, callbackName, undefined, active));
+      handlers = handlers.concat(this.findBattleEventHandlers(callbackName, getKey, active));
     }
   }
   // FIX: Do not speed sort handlers before gen 3 = use "host" ordering
@@ -128,8 +129,10 @@ function residualEvent(this: Battle, eventid: string, relayVar?: any) {
     const handler = handlers[0];
     handlers.shift();
     const effect = handler.effect;
-    if ((handler.effectHolder as Pokemon).fainted) continue;
-    if (handler.end && handler.state?.duration) {
+    if ((handler.effectHolder as Pokemon).fainted) {
+      if (!(handler.state?.isSlotCondition)) continue;
+    }
+    if (eventid === 'Residual' && handler.end && handler.state?.duration) {
       handler.state.duration--;
       if (!handler.state.duration) {
         const endCallArgs = handler.endCallArgs || [handler.effectHolder, effect.id];
@@ -144,8 +147,14 @@ function residualEvent(this: Battle, eventid: string, relayVar?: any) {
     if ((handler.effectHolder as Field).pseudoWeather) handlerEventid = `Field${eventid}`;
     if (handler.callback) {
       this.singleEvent(
-        handlerEventid, effect, handler.state, handler.effectHolder,
-        null, null, relayVar, handler.callback
+        handlerEventid,
+        effect,
+        handler.state,
+        handler.effectHolder,
+        null,
+        null,
+        undefined,
+        handler.callback,
       );
     }
 
@@ -209,7 +218,7 @@ export const patch = {
     battle.trunc = battle.dex.trunc.bind(battle.dex);
     battle.queue.insertChoice = insertChoice.bind(battle.queue);
     battle.eachEvent = eachEvent.bind(battle);
-    battle.residualEvent = residualEvent.bind(battle);
+    battle.fieldEvent = fieldEvent.bind(battle);
     if (prng) {
       const shuffle = battle.prng.shuffle.bind(battle.prng);
       battle.prng.shuffle = (items, start = 0, end = items.length) => {
@@ -220,9 +229,9 @@ export const patch = {
     if (debug) {
       const next = battle.prng.random.bind(battle.prng);
       battle.prng.random = (from?: number, to?: number) => {
-        const orig = battle.prng.getSeed().join();
+        const orig = battle.prng.getSeed();
         const result = next(from, to);
-        const seed = battle.prng.getSeed() as PRNGSeed;
+        const seed = battle.prng.getSeed().split(',').map(n => +n);
         const roll = (seed[0] << 16 >>> 0) + seed[1];
         const original = `0x${(roll).toString(16).padStart(8, '0').toUpperCase()}`;
         battle.add('debug', location(), orig, original);
@@ -391,7 +400,7 @@ export class FixedRNG extends PRNG {
   private index: number;
 
   constructor(rolls: Roll[]) {
-    super([0, 0, 0, 0]);
+    super('0,0,0,0');
     this.rolls = rolls;
     this.index = 0;
   }
