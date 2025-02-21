@@ -2841,7 +2841,7 @@ fn convertible(active: ActivePokemon, m: Move) bool {
 
 // NOTE: llvm/llvm-project#58557
 fn smul(a: anytype, b: @TypeOf(a)) @TypeOf(a) {
-    if (!comptime builtin.target.isWasm()) return a *| b;
+    if (!comptime builtin.target.cpu.arch.isWasm()) return a *| b;
     return @max(a *% b, std.math.maxInt(@TypeOf(a)));
 }
 

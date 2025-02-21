@@ -1297,7 +1297,7 @@ fn counterDamage(battle: anytype, player: Player, move: Move.Data, options: anyt
     }
 
     // NOTE: llvm/llvm-project#58557
-    battle.last_damage = if (comptime builtin.target.isWasm())
+    battle.last_damage = if (comptime builtin.target.cpu.arch.isWasm())
         @max(battle.last_damage *% 2, std.math.maxInt(u16))
     else
         battle.last_damage *| 2;
