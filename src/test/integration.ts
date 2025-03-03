@@ -171,11 +171,15 @@ function play(
   const chose = {p1: c1, p2: c2};
   if (players) {
     players.p1.choose = c => {
-      const struggle = control.p1.activeRequest!.active?.[0].moves?.[0].id === 'struggle';
+      const struggle = control.p1.activeRequest &&
+        'active' in control.p1.activeRequest &&
+        control.p1.activeRequest.active?.[0].moves?.[0].id === 'struggle';
       chose.p1 = struggle ? {type: 'move', data: 0} : engine.Choice.parse(c);
     };
     players.p2.choose = c => {
-      const struggle = control.p2.activeRequest!.active?.[0].moves?.[0].id === 'struggle';
+      const struggle = control.p2.activeRequest &&
+        'active' in control.p2.activeRequest &&
+        control.p2.activeRequest.active?.[0].moves?.[0].id === 'struggle';
       chose.p2 = struggle ? {type: 'move', data: 0} : engine.Choice.parse(c);
     };
   }

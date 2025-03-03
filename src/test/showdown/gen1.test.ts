@@ -37,8 +37,8 @@ const CFZ = (n: number) =>
 const CFZ_CAN = {key: 'data/mods/gen1/conditions.ts:146:14', value: ranged(128, 256) - 1};
 const CFZ_CANT = {...CFZ_CAN, value: CFZ_CAN.value + 1};
 const THRASH = (n: 3 | 4) =>
-  ({key: 'data/mods/gen1/conditions.ts:227:33', value: ranged(n - 2, 4 - 2) - 1});
-const MIN_WRAP = {key: 'data/mods/gen1/conditions.ts:199:26', value: MIN};
+  ({key: 'data/mods/gen1/conditions.ts:226:33', value: ranged(n - 2, 4 - 2) - 1});
+const MIN_WRAP = {key: 'data/mods/gen1/conditions.ts:198:26', value: MIN};
 const MAX_WRAP = {...MIN_WRAP, value: MAX};
 const REWRAP = {key: 'data/mods/gen1/scripts.ts:250:38', value: MIN};
 const METRONOME = ROLLS.metronome(gen, ['Metronome', 'Struggle']);
@@ -821,7 +821,7 @@ describe('Gen 1', () => {
       'move 1', 'move 2', 'move 3', 'move 4',
     ]);
 
-    battle.p1.activeRequest!.forceSwitch = true;
+    battle.p1.activeRequest!.forceSwitch = [true];
     expect(choices(battle, 'p1')).toEqual([
       'switch 2', 'switch 3', 'switch 4', 'switch 5', 'switch 6',
     ]);
