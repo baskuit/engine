@@ -69,3 +69,8 @@ fn CopyPtrAttrs(
     else
         .{ .Pointer = args });
 }
+
+// NOTE: std.meta.FieldType replaced by @FieldType in 0.14.0
+pub fn FieldType(comptime T: type, comptime field: std.meta.FieldEnum(T)) type {
+    return std.meta.fieldInfo(T, field).type;
+}

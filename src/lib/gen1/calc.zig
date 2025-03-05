@@ -99,7 +99,7 @@ pub const Calc = struct {
         self: Calc,
         player: Player,
         comptime field: Action.Field,
-    ) ?std.meta.FieldType(Action, field) {
+    ) ?util.FieldType(Action, field) {
         if (!enabled) return null;
 
         const val = @field(self.overrides.get(player), @tagName(field));
@@ -146,7 +146,7 @@ const Null = struct {
         self: Null,
         player: Player,
         comptime field: Action.Field,
-    ) ?std.meta.FieldType(Action, field) {
+    ) ?util.FieldType(Action, field) {
         _ = .{ self, player };
         return null;
     }

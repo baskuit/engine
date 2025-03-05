@@ -148,6 +148,6 @@ fn ReturnType(comptime field: Action.Field) type {
     return ?(switch (field) {
         .damages => u8,
         .critical_hits => Optional(bool),
-        else => std.meta.FieldType(Action, field),
+        else => util.FieldType(Action, field),
     });
 }
