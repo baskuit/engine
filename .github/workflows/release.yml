@@ -16,9 +16,9 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
           scope: '@pkmn'
-      - uses: goto-bus-stop/setup-zig@default
+      - uses: scheibo/build-zig@main
         with:
-          version: 0.11.0 # 0.12.0-dev.866+3a47bc715
+          patch-file: zig.patch
       - run: npm install --ignore-scripts
       - run: npm run release
         env:
