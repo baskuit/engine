@@ -45,7 +45,8 @@ const TARGETS = [
   {label: 'Linux - ARM64', triple: 'aarch64-linux-musl', mcpu: 'baseline'},
 ];
 
-if (semver.gt(sh('zig', ['version'], {bypass: true}), '0.12.0-dev.866+3a47bc715')) {
+// TODO: not actually prod-only, but can't detect patched Zig currently`
+if (argv.prod && semver.gt(sh('zig', ['version'], {bypass: true}), '0.12.0-dev.866+3a47bc715')) {
   // TODO: ziglang/zig#17768
   console.error('Releases must only be built with a Zig compiler before v0.12.0-dev.866+3a47bc715');
   process.exit(1);
