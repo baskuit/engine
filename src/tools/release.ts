@@ -45,8 +45,8 @@ const TARGETS = [
   {label: 'Linux - ARM64', triple: 'aarch64-linux-musl', mcpu: 'baseline'},
 ];
 
-// TODO: not actually prod-only, but can't detect patched Zig currently`
-if (argv.prod && semver.gt(sh('zig', ['version'], {bypass: true}), '0.12.0-dev.866+3a47bc715')) {
+let version: string = sh('zig', ['version'], {bypass: true});
+if (semver.gt(version, '0.12.0-dev.866+3a47bc715') && !version.endsWith('.patched')) {
   // TODO: ziglang/zig#17768
   console.error('Releases must only be built with a Zig compiler before v0.12.0-dev.866+3a47bc715');
   process.exit(1);
@@ -96,7 +96,7 @@ const debug = (files: string[]) => {
 
 // eslint-disable-next-line
 const json = require(path.join(ROOT, 'package.json'));
-let version: string = json.version;
+version = json.version;
 if (argv.prod) {
   if (debug(json.files)) {
     console.error('Refusing to produce a release containing debug logic');

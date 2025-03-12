@@ -1,3 +1,16 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ea25212fec..a40fd14af7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -70,7 +70,7 @@ if("${ZIG_VERSION}" STREQUAL "")
+                 if(NOT RESOLVED_ZIG_VERSION VERSION_GREATER GIT_TAG)
+                     message(SEND_ERROR "Zig version (${RESOLVED_ZIG_VERSION}) must be greater than tagged ancestor (${GIT_TAG}).")
+                 endif()
+-                set(RESOLVED_ZIG_VERSION "${RESOLVED_ZIG_VERSION}-dev.${GIT_COMMITS_AFTER_TAG}+${GIT_COMMIT}")
++                set(RESOLVED_ZIG_VERSION "${RESOLVED_ZIG_VERSION}-dev.${GIT_COMMITS_AFTER_TAG}+${GIT_COMMIT}.patched")
+             else()
+                 message(WARNING "Failed to parse version from output of `git describe`.")
+             endif()
 diff --git a/src/codegen/llvm.zig b/src/codegen/llvm.zig
 index f8aeface59..14f3027e6c 100644
 --- a/src/codegen/llvm.zig
