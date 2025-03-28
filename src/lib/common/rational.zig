@@ -260,22 +260,19 @@ fn mul_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !voi
 fn cmp_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !std.math.Order {
     switch (@typeInfo(T)) {
         Int => {
-            r.reduce();
-            s.reduce();
-
             const ad = std.math.mul(T, r.p, s.q) catch |err| switch (err) {
-                error.Overflow => reduce: {
+                error.Overflow => ad: {
                     r.reduce();
                     s.reduce();
-                    break :reduce try std.math.mul(T, r.p, s.q);
+                    break :ad try std.math.mul(T, r.p, s.q);
                 },
                 else => unreachable,
             };
             const bc = std.math.mul(T, r.q, s.p) catch |err| switch (err) {
-                error.Overflow => reduce: {
+                error.Overflow => bc: {
                     r.reduce();
                     s.reduce();
-                    break :reduce try std.math.mul(T, r.q, s.p);
+                    break :bc try std.math.mul(T, r.q, s.p);
                 },
                 else => unreachable,
             };
@@ -316,12 +313,12 @@ fn multiplication(comptime T: type, r: anytype, p: anytype, q: anytype) !void {
 
 fn addition(comptime T: type, r: anytype, p: anytype, q: anytype) !void {
     // (a/b) + (c/d) = (ad+bc)/(bd)
-    const d = try std.math.mul(T, r.q, q);
-    const n1 = try std.math.mul(T, r.p, q);
-    const n2 = try std.math.mul(T, r.q, p);
+    const bd = try std.math.mul(T, r.q, q);
+    const ad = try std.math.mul(T, r.p, q);
+    const bc = try std.math.mul(T, r.q, p);
 
-    r.p = try std.math.add(T, n1, n2);
-    r.q = d;
+    r.p = try std.math.add(T, ad, bc);
+    r.q = bd;
 }
 
 fn gcd(p: anytype, q: anytype) @TypeOf(p, q) {
@@ -414,7 +411,7 @@ test Rational {
         try doTurn(&r);
 
         r.reduce();
-        try expectEqual(Rational(t){ .p = 75383, .q = 35550920704 }, r);
+        try expectEqual(R{ .p = 75383, .q = 35550920704 }, r);
 
         try r.update(1, 4);
         if (t == u64) {
@@ -422,7 +419,7 @@ test Rational {
         } else {
             try doTurn(&r);
             r.reduce();
-            try expectEqual(Rational(t){ .p = 5682596689, .q = 2527735925804191711232 }, r);
+            try expectEqual(R{ .p = 5682596689, .q = 2527735925804191711232 }, r);
         }
 
         r.reset();
@@ -431,35 +428,33 @@ test Rational {
         try r.mul(&s);
         s = R{ .p = 3, .q = 4 };
         try r.mul(&s);
-        try expectEqual(Rational(t){ .p = 30, .q = 52 }, r);
+        try expectEqual(R{ .p = 30, .q = 52 }, r);
 
         s = R{ .p = 1, .q = 3 };
         try r.add(&s);
         r.reduce();
-        try expectEqual(Rational(t){ .p = 71, .q = 78 }, r);
+        try expectEqual(R{ .p = 71, .q = 78 }, r);
 
-        var h = Rational(t){ .p = 3, .q = 5 };
-        // Same Denominator
-        var cmptr = Rational(t){ .p = 2, .q = 5 };
-        try expectEqual(h.cmp(&cmptr), .gt);
-        cmptr = R{ .p = 4, .q = 5 };
-        try expectEqual(h.cmp(&cmptr), .lt);
+        var u = R{ .p = 3, .q = 5 };
+        var v = R{ .p = 2, .q = 5 };
+        try expectEqual(u.cmp(&v), .gt);
+        v = R{ .p = 4, .q = 5 };
+        try expectEqual(u.cmp(&v), .lt);
 
-        // Same Numerator
-        cmptr = R{ .p = 3, .q = 6 };
-        try expectEqual(h.cmp(&cmptr), .gt);
-        cmptr = R{ .p = 3, .q = 4 };
-        try expectEqual(h.cmp(&cmptr), .lt);
+        v = R{ .p = 3, .q = 6 };
+        try expectEqual(u.cmp(&v), .gt);
+        v = R{ .p = 3, .q = 4 };
+        try expectEqual(u.cmp(&v), .lt);
 
-        cmptr = R{ .p = 3, .q = 5 };
-        try expectEqual(h.cmp(&cmptr), .eq);
+        v = R{ .p = 3, .q = 5 };
+        try expectEqual(u.cmp(&v), .eq);
 
-        try doTurn(&h);
-        cmptr = R{ .p = 4567216874, .q = 89124781931235 };
+        try doTurn(&u);
+        v = R{ .p = 4567216874, .q = 89124781931235 };
         if (t == u64) {
-            try expectEqual(h.cmp(&cmptr), error.Overflow);
+            try expectEqual(u.cmp(&v), error.Overflow);
         } else {
-            try expectEqual(h.cmp(&cmptr), .lt);
+            try expectEqual(u.cmp(&v), .lt);
         }
     }
 }
