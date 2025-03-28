@@ -68,6 +68,11 @@ pub fn Rational(comptime T: type) type {
             return mul_(T, o, r, s);
         }
 
+        /// Compares two rationals using the identity (a/b) > (c/d) => ad > bc
+        pub fn cmp(r: *Self, s: anytype) Error!std.math.Order {
+            return cmp_(T, o, r, s);
+        }
+
         /// Normalize the rational by reducing by the greatest common divisor.
         pub fn reduce(r: *Self) void {
             reduce_(r);
@@ -113,6 +118,11 @@ pub fn Rational(comptime T: type) type {
         /// Multiplies two rationals.
         pub fn mul(r: *Self, s: anytype) Error!void {
             return mul_(T, o, r, s);
+        }
+
+        /// Compares two rationals using the identity (a/b) > (c/d) => ad > bc
+        pub fn cmp(r: *Self, s: anytype) Error!std.math.Order {
+            return cmp_(T, o, r, s);
         }
 
         /// Normalize the rational by reducing by the greatest common divisor.
@@ -247,6 +257,44 @@ fn mul_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !voi
     }
 }
 
+fn cmp_(comptime T: type, comptime o: comptime_int, r: anytype, s: anytype) !std.math.Order {
+    switch (@typeInfo(T)) {
+        Int => {
+            r.reduce();
+            s.reduce();
+
+            const ad = std.math.mul(T, r.p, s.q) catch |err| switch (err) {
+                error.Overflow => reduce: {
+                    r.reduce();
+                    s.reduce();
+                    break :reduce try std.math.mul(T, r.p, s.q);
+                },
+                else => unreachable,
+            };
+            const bc = std.math.mul(T, r.q, s.p) catch |err| switch (err) {
+                error.Overflow => reduce: {
+                    r.reduce();
+                    s.reduce();
+                    break :reduce try std.math.mul(T, r.q, s.p);
+                },
+                else => unreachable,
+            };
+
+            return std.math.order(ad, bc);
+        },
+        Float => {
+            if (r.q > o or r.p > o) r.reduce();
+            if (s.q > o or s.p > o) s.reduce();
+
+            const ad: T = r.p * s.q;
+            const bc: T = r.q * s.p;
+
+            return std.math.order(ad, bc);
+        },
+        else => unreachable,
+    }
+}
+
 fn reduce_(r: anytype) void {
     const d = gcd(r.p, r.q);
     if (d == 1) return;
@@ -356,7 +404,8 @@ fn doTurn(r: anytype) !void {
 
 test Rational {
     inline for (.{ u64, u128, u256, f64 }) |t| {
-        var r: Rational(t) = .{};
+        const R = Rational(t);
+        var r: R = .{};
 
         var c: t = 128;
         _ = &c;
@@ -378,16 +427,40 @@ test Rational {
 
         r.reset();
 
-        var s = Rational(t){ .p = 10, .q = 13 };
+        var s = R{ .p = 10, .q = 13 };
         try r.mul(&s);
-        s = Rational(t){ .p = 3, .q = 4 };
+        s = R{ .p = 3, .q = 4 };
         try r.mul(&s);
         try expectEqual(Rational(t){ .p = 30, .q = 52 }, r);
 
-        s = Rational(t){ .p = 1, .q = 3 };
+        s = R{ .p = 1, .q = 3 };
         try r.add(&s);
         r.reduce();
         try expectEqual(Rational(t){ .p = 71, .q = 78 }, r);
+
+        var h = Rational(t){ .p = 3, .q = 5 };
+        // Same Denominator
+        var cmptr = Rational(t){ .p = 2, .q = 5 };
+        try expectEqual(h.cmp(&cmptr), .gt);
+        cmptr = R{ .p = 4, .q = 5 };
+        try expectEqual(h.cmp(&cmptr), .lt);
+
+        // Same Numerator
+        cmptr = R{ .p = 3, .q = 6 };
+        try expectEqual(h.cmp(&cmptr), .gt);
+        cmptr = R{ .p = 3, .q = 4 };
+        try expectEqual(h.cmp(&cmptr), .lt);
+
+        cmptr = R{ .p = 3, .q = 5 };
+        try expectEqual(h.cmp(&cmptr), .eq);
+
+        try doTurn(&h);
+        cmptr = R{ .p = 4567216874, .q = 89124781931235 };
+        if (t == u64) {
+            try expectEqual(h.cmp(&cmptr), error.Overflow);
+        } else {
+            try expectEqual(h.cmp(&cmptr), .lt);
+        }
     }
 }
 
@@ -443,6 +516,10 @@ pub const BigRational = struct {
     pub fn mul(r: *BigRational, s: *const BigRational) !void {
         try r.val.mul(r.val, s.val);
     }
+
+    pub fn cmp(r: *BigRational, s: *const BigRational) Error!std.math.Order {
+        return std.math.big.Rational.order(r.val, s.val);
+    }
 };
 
 test BigRational {
@@ -486,6 +563,9 @@ test BigRational {
 
     try s.setRatio(71, 78);
     try expect((try s.order(r.val)) == .eq);
+
+    try expectEqual(t.cmp(&r), .lt);
+    try expectEqual(r.cmp(&t), .gt);
 }
 
 test "minimum" {
