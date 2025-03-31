@@ -1446,7 +1446,16 @@ fn moveHit(
             break :miss true;
         }
         if (!showdown) {
-            if (move.effect == .Swift) return true;
+            if (move.effect == .Swift) {
+                // If Swift could cause a division-by-zero freeze (which doesn't exist on Pokémon
+                // Showdown, hence why the block above doesn't include this code), we need the
+                // damage roll to be committed. However, the commit code will not save this roll if
+                // the glitch occurs and the move was not marked as having hit. To work around this
+                // we flag that the move hit (as Swift trivially does), but pass the probability of
+                // the hit as zero to ensure it doesn't actually get saved.
+                try options.chance.hit(player, true, 0);
+                return true;
+            }
             if (foe.active.volatiles.Invulnerable) break :miss true;
         }
 
