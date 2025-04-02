@@ -449,8 +449,9 @@ test Types {
     try expect(!Type.Steel.special());
     try expect(Type.Dark.special());
 
-    try expectEqual(@as(u8, 3), Type.Water.precedence());
-    try expect(Type.Bug.precedence() > Type.Poison.precedence());
+    try expectEqual(@as(u8, 3), Type.precedence(.Water, .Water));
+    try expect(Type.precedence(.Poison, .Bug) > Type.precedence(.Poison, .Poison));
+    try expect(Type.precedence(.Ice, .Fire) > Type.precedence(.Ice, .Water));
 
     try expectEqual(Effectiveness.Super, Type.effectiveness(.Ghost, .Psychic));
     try expectEqual(Effectiveness.Super, Type.effectiveness(.Water, .Fire));

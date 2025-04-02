@@ -1109,9 +1109,12 @@ const GEN: {[gen in GenerationNum]?: GenerateFn} = {
     }
 
     const precedenceFn =
-    `/// The precedence order of Type \`type\`.
-    pub fn precedence(self: Type) u8 {
-        return PRECEDENCE[@intFromEnum(self)];
+    `/// The precedence order of Type \`t2\` vs. Type \`t1\`.
+    pub fn precedence(t1: Type, t2: Type) u8 {
+        // The Ice vs. Fire matchup is out of order - return a higher
+        // number than anything else so that it sorts last correctly
+        if (t1 == .Ice and t2 == .Fire) return ${precedence.length};
+        return PRECEDENCE[@intFromEnum(t2)];
     }`;
 
     const extraFns = `

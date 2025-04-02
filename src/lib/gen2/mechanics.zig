@@ -682,7 +682,7 @@ pub fn adjustDamage(battle: anytype, player: Player, state: *State, _: anytype) 
 
     // Type effectiveness matchup precedence only matters with (NVE, SE)
     if (!showdown and (eff1 + eff2) == Effectiveness.mismatch and
-        types.type1.precedence() > types.type2.precedence())
+        Type.precedence(state.type, types.type1) > Type.precedence(state.type, types.type2))
     {
         assert(eff2 != neutral);
         d = d *% eff2 / 10;
