@@ -172,7 +172,7 @@ pub const Type = enum(u8) {
         return CHART[@intFromEnum(t1)][@intFromEnum(t2)];
     }
 
-    /// The precedence order of Type `t2` vs. Type `t1`.
+    /// The precedence order of Type `t1` vs. Type `t2`.
     pub fn precedence(t1: Type, t2: Type) u8 {
         // The Ice vs. Fire matchup is out of order - return a higher
         // number than anything else so that it sorts last correctly
