@@ -784,7 +784,9 @@ const GEN: {[gen in GenerationNum]?: GenerateFn} = {
       const match = /move (\w+),\W+(\w+),/.exec(line);
       if (!match) return undefined;
       const move = gen.moves.get(match[1] === 'PSYCHIC_M' ? 'PSYCHIC' : match[1])!;
-      const effect = HIGH_CRIT.includes(match[1]) ? 'HIGH_CRITICAL_EFFECT' : match[2];
+      const effect = HIGH_CRIT.includes(match[1]) ? 'HIGH_CRITICAL_EFFECT'
+        : match[2] === 'FREEZE_SIDE_EFFECT1' ? 'FREEZE_SIDE_EFFECT'
+        : match[2];
       if (move.num !== i + 1) {
         throw new Error(`Expected ${move.num} for ${move.name} and received ${i + 1}`);
       }
