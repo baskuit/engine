@@ -666,7 +666,7 @@ const moveFns = async (
     unleashenergy: 'Effects.bide.unleash', doubleflyingdamage: 'Effects.double.flying',
     doubleundergrounddamage: 'Effects.double.underground',
     doubleminimizedamage: 'Effects.double.minimize', getmagnitude: 'Effects.magnitude',
-    checkcurl: 'Effects.rollout.check', rolloutpower: 'Effects.rollout.power',
+    checkrollout: 'Effects.rollout.check', rolloutpower: 'Effects.rollout.power',
   };
 
   const BOOST = /[^th]Up[12]?(?:Chance)?$/;
