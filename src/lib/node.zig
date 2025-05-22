@@ -1,13 +1,9 @@
+const c = @import("common/napi.zig");
 const js = @import("common/js.zig");
 const node = @import("bindings/node.zig");
 const std = @import("std");
 
 const assert = std.debug.assert;
-
-const c = @cImport({
-    @cDefine("NAPI_VERSION", "8");
-    @cInclude("node_api.h");
-});
 
 export fn napi_register_module_v1(env: c.napi_env, exports: c.napi_value) c.napi_value {
     const properties = [_]c.napi_property_descriptor{

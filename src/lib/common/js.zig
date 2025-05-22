@@ -1,13 +1,9 @@
 const std = @import("std");
+const c = @import("napi.zig");
 
 const assert = std.debug.assert;
 
 const Int = if (@hasField(std.builtin.Type, "int")) .int else .Int;
-
-const c = @cImport({
-    @cDefine("NAPI_VERSION", "8");
-    @cInclude("node_api.h");
-});
 
 pub const Array = struct {
     pub fn init(env: c.napi_env, o: struct { length: ?usize }) c.napi_value {

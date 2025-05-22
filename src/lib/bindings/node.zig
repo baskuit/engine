@@ -1,13 +1,9 @@
+const c = @import("../common/napi.zig");
 const js = @import("../common/js.zig");
 const pkmn = @import("../pkmn.zig");
 const std = @import("std");
 
 const assert = std.debug.assert;
-
-const c = @cImport({
-    @cDefine("NAPI_VERSION", "8");
-    @cInclude("node_api.h");
-});
 
 pub fn register(env: c.napi_env) c.napi_value {
     const object = js.Object.init(env);
