@@ -57,6 +57,7 @@
     "src/lib/common/data.zig",
     "src/lib/common/debug.zig",
     "src/lib/common/js.zig",
+    "src/lib/common/napi.zig",
     "src/lib/common/optional.zig",
     "src/lib/common/options.zig",
     "src/lib/common/protocol.zig",
