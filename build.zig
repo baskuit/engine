@@ -73,7 +73,8 @@ pub fn build(b: *std.Build) !void {
     std.debug.assert(std.mem.eql(u8, repository.first(), "github"));
 
     const fast = try std.SemanticVersion.parse("0.12.0-dev.866+3a47bc715");
-    if (optimize != .Debug and fast.order(builtin.zig_version) == .lt) {
+    const patched = std.mem.endsWith(u8, builtin.zig_version_string, "patched");
+    if (optimize != .Debug and fast.order(builtin.zig_version) == .lt and !patched) {
         std.log.warn("Release builds are ~10-20% slower than before Zig " ++
             "v0.12.0-dev.866+3a47bc715 due to ziglang/zig#17768", .{});
     }
