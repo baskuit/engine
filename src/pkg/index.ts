@@ -50,10 +50,10 @@ export interface API {
 
 /** Helper type removing function types from a data type `T`. */
 export type Data<T> =
-  T extends readonly any[] ? {[K in keyof T]: Data<T[K]>} :
-  T extends Iterable<infer U> ? (U extends object ? Iterable<Data<U>> : T) :
+  T extends readonly any[] ? {[K in keyof T]: Data<T[K]>}
+  : T extends Iterable<infer U> ? (U extends object ? Iterable<Data<U>> : T)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  T extends object ? {[K in keyof T as T[K] extends Function ? never : K]: Data<T[K]>} : T;
+  : T extends object ? {[K in keyof T as T[K] extends Function ? never : K]: Data<T[K]>} : T;
 
 /** Type definitions for Generation I Pokémon data relevant in a battle. */
 export namespace Gen1 {
